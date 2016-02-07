@@ -116,7 +116,13 @@ class Lexer:
         print "Please input SMM program, press <Ctrl-D> when finish"
         while True:
             try:
-                self.__ProgBuffer += raw_input()
+                s = raw_input()
+                hash_idx = s.find('#');
+                if hash_idx > 0:
+                    s = s[:hash_idx]
+                if hash_idx == 0:
+                    s = ''
+                self.__ProgBuffer += s
                 self.__ProgBuffer += ' '
             except EOFError:
                 self.__ProgBuffer += '$'

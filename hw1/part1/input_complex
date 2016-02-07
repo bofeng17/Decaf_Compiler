@@ -1,6 +1,6 @@
 ildc 20
 ildc 5
-here:   ildc 1
+here2: here:   ildc 1
 isub
 dup
 jz  there
@@ -8,6 +8,7 @@ swap
 ildc 10
 iadd
 swap
-jmp here
+jmp here2 #lalal
+#lululu
 there:
     pop
