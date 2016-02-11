@@ -1,7 +1,7 @@
 # """Lexer for SC"""
 
 from collections import deque
-from Token import Tok, TokBinOp, TokEqual, TokId, TokNum, TokEOF
+from Token import Tok, TokBinOp, TokEqual, TokId, TokNum, TokTerm, TokEOF
 
 class Lexer:
     def __init__(self, srcLoc = 'stdin'):
@@ -33,7 +33,7 @@ class Lexer:
             except IOError:
                 print "[Lexer][Error]: Source file \"%s\" doesn't exist!" % srcLoc
                 return
-        if __debug__: # testing line diving
+        if __debug__: # testing line dividing
             for line in self.__ProgBuffer:
                 print line
     
@@ -91,6 +91,10 @@ class Lexer:
             self.retCh(curCh)
             return TokNum(int(numStr))
 
+        # may need to be deleted, beacause ';' only serves as statement delimeter
+        if curCh == ';':
+            return TokTerm()
+
         if curCh == '$':
             return TokEOF()
 
@@ -101,5 +105,5 @@ if __name__ == '__main__':
     #lexer = Lexer()
     while True:
         lexer.getNextToken()
-        print type(lexer.CurTok), lexer.CurTok.getTokenName()
+        print type(lexer.CurTok), lexer.CurTok.getTokName()
 

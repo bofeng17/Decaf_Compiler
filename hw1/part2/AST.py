@@ -2,14 +2,14 @@ class AST:
     """virtual class for all ASTs, main reason to have this parent class is
     in case any future usage that needs to add a common attribute to all derived ASTs"""
     def __init__(self, name):
-        self.__name = name
+        self._name = name
     def getName(self):
-        return self.__name
+        return self._name
 
 class BinOpExprAST(AST):
     """AST for the binary operations in SC"""
     def __init__(self, op, lnode, rnode):
-        self.__name = 'BinOpExprAST'
+        self._name = 'BinOpExprAST'
         self.__op = op
         self.__lnode = lnode
         self.__rnode = rnode
@@ -23,7 +23,7 @@ class BinOpExprAST(AST):
 class ConstantAST(AST):
     """AST for integer constants"""
     def __init__(self, val):
-        self.__name = 'ConstantAST'
+        self._name = 'ConstantAST'
         self.__val = val
 
     def getVal(self):
@@ -33,7 +33,7 @@ class ConstantAST(AST):
 class IdentiferAST(AST):
     """AST for Identifiers"""
     def __init__(self, id_name):
-        self.__name = 'IdentiferAST'
+        self._name = 'IdentiferAST'
         self.__id_name = id_name
 
     def getIDName(self):
@@ -46,7 +46,7 @@ class AssignStmtAST(AST):
     def __init__(self, id_node, assignee):
         self.__id_node = id_node
         self.__assignee = assignee
-        self.__name = 'AssignStmtAST'
+        self._name = 'AssignStmtAST'
 
     def getIDNode(self):
         return self.__id_node

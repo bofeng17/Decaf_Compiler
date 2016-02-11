@@ -3,7 +3,7 @@
 class Tok(object):
     def __init__(self, tokTypeStr = 'empty'):
         self.tokTypeStr = tokTypeStr
-    def getTokenName(self):
+    def getTokName(self):
         return self.tokTypeStr
 
 class TokBinOp(Tok):
@@ -45,6 +45,10 @@ class TokNum(Tok):
         super(TokNum, self).__init__(self.__class__.__name__)
     def getNumVal(self):
         return self.numVal
+
+class TokTerm(Tok):
+    def __init__(self):
+        super(TokTerm, self).__init__(self.__class__.__name__)
 
 class TokEOF(Tok):
     def __init__(self):

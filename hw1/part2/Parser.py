@@ -17,8 +17,10 @@ class Parser():
     def parseExpr(self):
         if self.tokenIs('TokNum'):
             expr_ast = ConstantAST(self.__curr_lexer.CurTok.getNumVal())
+            self.lexerMoveOn()
         elif self.tokenIs('TokId'):#TODO: check if at code emit stage will check sym initialized
             expr_ast = IdentiferAST(self.__curr_lexer.CurTok.getIdStr())
+            self.lexerMoveOn()
         elif self.tokenIs('TokBinOp'):
             op = self.__curr_lexer.CurTok.getOp()
             self.lexerMoveOn()
@@ -28,7 +30,6 @@ class Parser():
         else:
             assert False, "error: token [%r] is not expected in Expression"%self.__curr_lexer.CurTok.getTokName()
 
-        self.lexerMoveOn()
         return expr_ast
 
 
