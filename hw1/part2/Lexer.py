@@ -25,7 +25,8 @@ class Lexer:
                 lines = list(f) # list of lines in file f
                 i = 0
                 while i < len(lines) - 1: # strip the '\n' in each line except the last line which doesn't end with '\n'
-                    lines[i] = lines[i][:-1]
+                    lines[i] = lines[i].replace('\n','')
+                    lines[i] = lines[i].replace('\r','')
                     i += 1
                 self.__ProgBuffer = deque(lines)
                 self.__ProgBuffer.append('$')
@@ -36,7 +37,7 @@ class Lexer:
         if __debug__: # testing line dividing
             for line in self.__ProgBuffer:
                 print line
-    
+
     def getCh(self):
         while self.curStr == '':
             try:
@@ -65,10 +66,10 @@ class Lexer:
         if TokBinOp.isOp(curCh):
             return TokBinOp(curCh)
 
-        if curCh == '=':
+        elif curCh == '=':
             return TokEqual()
 
-        if curCh.isalpha():
+        elif curCh.isalpha():
             idStr = ''
             while curCh.isalnum() or curCh == '_':
                 idStr += curCh
@@ -80,7 +81,7 @@ class Lexer:
 #                return TokWhile()
             return TokId(idStr)
 
-        if curCh.isdigit() or curCh == '~':
+        elif curCh.isdigit() or curCh == '~':
             numStr = ''
             if curCh == '~':
                 numStr += '-'
@@ -92,11 +93,15 @@ class Lexer:
             return TokNum(int(numStr))
 
         # may need to be deleted, beacause ';' only serves as statement delimeter
-        if curCh == ';':
+        elif curCh == ';':
             return TokTerm()
 
-        if curCh == '$':
+        elif curCh == '$':
             return TokEOF()
+
+        else:
+            print "[Lexer][Error]: character '%c' is not defined in SC language!" % curCh
+            exit()
 
 
 # just for testing

@@ -76,7 +76,7 @@ class SMMInterpretor:
                     res = s_top2_val % s_top1_val
                 self.__stack.push(str(res))
             self.__PC += 1
-        result = self.__stack.pop()
+        result = self.__stack.pop() # in compiled SC code, stack is empty in the end
         print result
 
     @staticmethod
