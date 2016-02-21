@@ -4,6 +4,18 @@ import ply.yacc as yacc
 # Get the token map from the lexer.  This is required.
 from DECAFLexer import tokens
 
+precedence = (
+        ('right', '='),  # Nonassociative operators
+        ('left', 'OR'),  # Nonassociative operators
+        ('left', 'AND'),  # Nonassociative operators
+        ('nonassoc', 'EQL', 'UNEQL'),  # Nonassociative operators
+        ('nonassoc', '<', '>', 'LE', 'GE'),  # Nonassociative operators
+        ('left', '+', '-'),
+        ('left', '*', '/'),
+        ('right', '!', 'INC', 'DEC'),            # Unary minus operator
+
+)
+
 def p_program(p):
     '''program : program class_decl
         | empty'''
@@ -200,7 +212,7 @@ def p_empty(p):
 if __name__ == '__main__':
     # Build the parser
     parser = yacc.yacc()
-    
+
     while True:
         try:
             s = raw_input('calc > ')
