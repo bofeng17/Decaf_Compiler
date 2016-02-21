@@ -4,20 +4,20 @@ import ply.lex as lex
 
 # List of token names.
 reserved = {
-        'boolean': 'BOOLEAN', 'break': 'BREAK', 'continue': 'CONTINUE', 'class': 'CLASS', 'do': 'DO', 'else': 'ELSE',
-        'extends': 'EXTENDS', 'false': 'FALSE', 'float': 'FLOAT', 'for': 'FOR', 'if': 'IF', 'int': 'INT',
-        'new': 'NEW', 'null': 'NULL', 'private': 'PRIVATE', 'public': 'PUBLIC', 'return': 'RETURN', 'static': 'STATIC',
-        'super': 'SUPER', 'this': 'THIS', 'true': 'TRUE', 'void': 'VOID', 'while': 'WHILE',
-        }
+    'boolean': 'BOOLEAN', 'break': 'BREAK', 'continue': 'CONTINUE', 'class': 'CLASS', 'do': 'DO', 'else': 'ELSE',
+    'extends': 'EXTENDS', 'false': 'FALSE', 'float': 'FLOAT', 'for': 'FOR', 'if': 'IF', 'int': 'INT',
+    'new': 'NEW', 'null': 'NULL', 'private': 'PRIVATE', 'public': 'PUBLIC', 'return': 'RETURN', 'static': 'STATIC',
+    'super': 'SUPER', 'this': 'THIS', 'true': 'TRUE', 'void': 'VOID', 'while': 'WHILE',
+}
 tokens = ['ID', 'INT_CONST', 'FLOAT_CONST', 'STRING_CONST',
-#              'PLUS', 'MINUS', 'TIMES', 'DIVIDE',
+          #              'PLUS', 'MINUS', 'TIMES', 'DIVIDE',
           'INC', 'DEC',
           'AND', 'OR',
-#              'NOT', 'ASSN',
+          #              'NOT', 'ASSN',
           'EQL', 'UNEQL', 'LE', 'GE',
-#              'LT', 'GT',
-#              'LPAREN', 'RPAREN', 'LBRCKT', 'RBRCKT', 'LBRACE', 'RBRACE',
-#               'COMMA', 'DOT', 'SEMICOL',
+          #              'LT', 'GT',
+          #              'LPAREN', 'RPAREN', 'LBRCKT', 'RBRCKT', 'LBRACE', 'RBRACE',
+          #               'COMMA', 'DOT', 'SEMICOL',
           ] + list( reserved.values())
 
 literals = "+-*/!=<>()[]{},.;"
@@ -94,14 +94,13 @@ def t_error( t):
     t.lexer.skip(1)
 
 
-def scan(self):
-#         lexer = lex.lex(module = DECAFLexer, debug = 1)
-     lexer = lex.lex(module = self)
 
+lexer = lex.lex()
+def scan(data):
     # Input
-     lexer.input( data)
+    lexer.input( data)
 
-def test(self):
+def test():
     # Tokenize
     while True:
         tok =  lexer.token()
