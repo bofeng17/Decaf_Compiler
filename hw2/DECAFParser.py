@@ -17,13 +17,17 @@ precedence = (
 )
 
 def p_program(p):
+#    '''program : program class_decl
+#        | empty'''
     '''program : program class_decl
-        | empty'''
+               | class_decl'''
+    print 'program reduce success'
 # action here
 
 def p_class_decl(p):
     '''class_decl : CLASS ID '{' class_body_decls '}'
         | CLASS ID '(' EXTENDS ID ')' '{' class_body_decls '}' '''
+    print 'class_decl'
 
 def p_class_body_decls(p):
     '''class_body_decls : class_body_decls class_body_decl
@@ -67,12 +71,14 @@ def p_variable(p):
         | ID'''
 
 def p_method_decl(p):
-    '''method_decl : modifier '(' all_type ')' ID '(' formals ')' block
-        | modifier '(' all_type ')' ID '(' ')' block'''
+    '''method_decl : modifier type ID '(' formals ')' block
+        | modifier VOID ID '(' formals ')' block
+        | modifier type ID '(' ')' block
+        | modifier VOID ID '(' ')' block'''
 
-def p_all_type(p):
-    '''all_type : type
-        | VOID'''
+#def p_all_type(p):
+#    '''all_type : type
+#        | VOID'''
 
 def p_constructor_decl(p):
     '''constructor_decl : modifier ID '(' formals ')' block
@@ -93,8 +99,7 @@ def p_stmts(p):
         | empty'''
 
 def p_stmt(p): # the FOR statement is not finished for containing too many '?'
-    '''stmt : IF '(' expr ')' stmt
-        | IF '(' expr ')' stmt ELSE stmt
+    '''stmt : IF '(' expr ')' stmt has_else
         | WHILE '(' expr ')' stmt
         | FOR '(' has_stmt_expr ';' has_expr ';' has_stmt_expr ')' stmt
         | RETURN has_expr ';'
@@ -105,6 +110,10 @@ def p_stmt(p): # the FOR statement is not finished for containing too many '?'
         | var_decl
         | ';' '''
 
+def p_has_else(p):
+    '''has_else : ELSE stmt
+                | empty'''
+
 def p_has_stmt_expr(p):
     '''has_stmt_expr : stmt_expr
         | empty'''
@@ -112,11 +121,6 @@ def p_has_stmt_expr(p):
 def p_has_expr(p):
     '''has_expr : expr
         | empty'''
-
-
-def p_exprs(p):
-    '''exprs : exprs expr
-        | expr'''
 
 def p_literal(p):
     '''literal : INT_CONST
@@ -161,9 +165,21 @@ def p_expr(p):
     '''expr : primary
         | assign
         | new_array
-        | expr arith_op expr
-        | expr bool_op expr
-        | unary_op expr'''
+        | expr '+' expr
+        | expr '-' expr
+        | expr '*' expr
+        | expr '/' expr
+        | expr AND expr
+        | expr OR expr
+        | expr EQL expr
+        | expr UNEQL expr
+        | expr '<' expr
+        | expr '>' expr
+        | expr LE expr
+        | expr GE expr
+        | '+' expr %prec '!'
+        | '-' expr %prec '!' 
+        | '!' expr '''
 
 def p_assign(p):
     '''assign : lhs '=' expr
@@ -180,26 +196,26 @@ def p_new_array_temp(p):
     '''new_array_temp : new_array_temp '[' expr ']'
         | NEW type '[' expr ']' '''
 
-def p_arith_op(p):
-    '''arith_op : '+'
-        | '-'
-        | '*'
-        | '/' '''
+#def p_arith_op(p):
+#    '''arith_op : '+'
+#        | '-'
+#        | '*'
+#        | '/' '''
 
-def p_bool_op(p):
-    '''bool_op : AND
-        | OR
-        | EQL
-        | UNEQL
-        | '<'
-        | '>'
-        | LE
-        | GE'''
+#def p_bool_op(p):
+#    '''bool_op : AND
+#        | OR
+#        | EQL
+#        | UNEQL
+#        | '<'
+#        | '>'
+#        | LE
+#        | GE'''
 
-def p_unary_op(p):
-    '''unary_op : '+'
-        | '-'
-        | '!' '''
+#def p_unary_op(p):
+#    '''unary_op : '+'
+#        | '-'
+#        | '!' '''
 
 def p_stmt_expr(p):
     '''stmt_expr : assign
@@ -209,15 +225,32 @@ def p_empty(p):
     '''empty : '''
     pass
 
+# Error rule for syntax errors
+def p_error(p):
+    print("Syntax error in input!")
+
 if __name__ == '__main__':
     # Build the parser
+
     parser = yacc.yacc()
 
-    while True:
-        try:
-            s = raw_input('calc > ')
-        except EOFError:
-            break
-        if not s: continue
-        result = parser.parse(s)
-        print(result)
+    s = '''
+        class nrfib{
+        public static void main() {
+        int n, i, fn, fn_prev;
+        n = In.scan_int();
+        fn = 1;
+        fn_1 = 0;
+        for(i=1; i<n; i=i+1) {
+        fn = fn_prev + fn;
+        fn_prev = fn - fn_prev;
+        }
+        Out.print("Fib = ");
+        Out.print(fn);
+        Out.print("\\n");
+        }
+        }
+        '''
+    
+    result = parser.parse(s, debug = 1)
+    print(result)
