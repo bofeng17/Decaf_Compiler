@@ -1,11 +1,7 @@
 import ply.yacc as yacc
 
 # Get the token map from the lexer.  This is required.
-from DECAFLexer import DECAFLexer
-
-def p_empty(p):
-    '''empty : '''
-    pass
+from DECAFLexer import tokens
 
 def p_program(p):
     '''program : program class_decl
@@ -13,8 +9,8 @@ def p_program(p):
     # action here
 
 def p_class_decl(p):
-    '''class_decl : CLASS ID { class_body_decls }
-                  | CLASS ID ( EXTENDS ID ) { class_body_decls }'''
+    '''class_decl : CLASS ID '{' class_body_decls '}'
+                  | CLASS ID '(' EXTENDS ID ')' '{' class_body_decls '}' '''
 
 def p_class_body_decls(p):
     '''class_body_decls : class_body_decls class_body_decl
@@ -50,39 +46,44 @@ def p_type(p):
             | ID'''
 
 def p_variables(p):
-    '''variables : variables , variable
+    '''variables : variables ',' variable
                  | variable'''
 
 def p_variable(p):
-    '''variable : variable [ ]
+    '''variable : variable '[' ']'
                 | ID'''
 
 def p_method_decl(p):
-    '''method_decl : modifier ( type | VOID ) ID ( formals ) block
-                   | modifier ( type | VOID ) ID ( ) block'''
+    '''method_decl : modifier '(' all_type ')' ID '(' formals ')' block
+                   | modifier '(' all_type ')' ID '(' ')' block'''
+
+def p_all_type(p):
+    '''all_type : type 
+                | VOID'''
 
 def p_constructor_decl(p):
-    '''constructor_decl : modifier ID ( formals ) block
-                        | modifier ID ( ) block'''
+    '''constructor_decl : modifier ID '(' formals ')' block
+                        | modifier ID '(' ')' block'''
 
 def p_formals(p):
-    '''formals : formals , formal_param
+    '''formals : formals ',' formal_param
                | formal_param'''
 
 def p_formal_param(p):
     '''formal_param : type variable'''
 
 def p_block(p):
-    '''block : { stmts }'''
+    '''block : '{' stmts '}' '''
 
 def p_stmts(p):
     '''stmts : stmts stmt
              | empty'''
 
 def p_stmt(p): # the FOR statement is not finished for containing too many '?'
-    '''stmt : IF ( expt ) stmt | IF ( expt ) stmt ELSE stmt
-            | WHILE ( expr ) stmt
-            | FOR ( stmt_expr ; expr ; stmt_expr ) stmt
+    '''stmt : IF '(' expr ')' stmt
+            | IF '(' expr ')' stmt ELSE stmt
+            | WHILE '(' expr ')' stmt
+            | FOR '(' stmt_expr ';' expr ';' stmt_expr ')' stmt
             | RETURN exprs
             | stmt_expr
             | BREAK
@@ -106,8 +107,8 @@ def p_primary(p):
     '''primary : literal
         | THIS
         | SUPER
-        | ( expr )
-        | NEW ID ( have_arguments )
+        | '(' expr ')'
+        | NEW ID '(' have_arguments ')'
         | lhs
         | method_invocation'''
 
@@ -116,7 +117,7 @@ def p_have_arguments(p):
                       | empty'''
 
 def p_arguments(p):
-    '''arguments : arguments , expr
+    '''arguments : arguments ',' expr
                  | expr'''
         
 def p_lhs(p):
@@ -124,14 +125,14 @@ def p_lhs(p):
         | array_access'''
 
 def p_field_access(p):
-    '''field_access : primary . ID
+    '''field_access : primary '.' ID
         | ID'''
 
 def p_array_access(p):
-    '''array_access : primary [ expr ]'''
+    '''array_access : primary '[' expr ']' '''
 
 def p_method_invocation(p):
-    '''method_invocation : field_access ( have_arguments )'''
+    '''method_invocation : field_access '(' have_arguments ')' '''
 
 def p_expr(p):
     '''expr : primary
@@ -142,32 +143,48 @@ def p_expr(p):
         | unary_op expr'''
 
 def p_assign(p):
-    '''assign : lhs = expr
+    '''assign : lhs '=' expr
         | lhs INC
         | INC lhs
         | lhs DEC
         | DEC lhs'''
 
 def p_new_array(p):
-    '''new_array : new_array [ ]
+    '''new_array : new_array '[' ']'
                  | new_array_temp '''
 
 def p_new_array_temp(p):
-    '''new_array_temp : new_array_temp [ expr ]
-                      | NEW type [ expr ]'''
+    '''new_array_temp : new_array_temp '[' expr ']'
+                      | NEW type '[' expr ']' '''
 
 def p_arith_op(p):
-    '''arith_op : + | - | * | /'''
+    '''arith_op : '+' 
+        | '-' 
+        | '*' 
+        | '/' '''
 
 def p_bool_op(p):
-    '''bool_op : AND | OR | EQL | UNEQL | < | > | LE | GE'''
+    '''bool_op : AND 
+        | OR 
+        | EQL 
+        | UNEQL 
+        | '<' 
+        | '>' 
+        | LE 
+        | GE'''
 
 def p_unary_op(p):
-    '''unary_op: + | - | !'''
+    '''unary_op : '+' 
+        | '-' 
+        | '!' '''
 
 def p_stmt_expr(p):
     '''stmt_expr : assign
         | method_invocation'''
+
+def p_empty(p):
+    '''empty : '''
+    pass
 
 if __name__ == '__main__':
     # Build the parser
