@@ -21,7 +21,7 @@ class SC_Compier:
 
 
 if __name__ == '__main__':
-    lexer = Lexer.Lexer('test_input')#default src location is stdin
+    lexer = Lexer.Lexer()#default src location is stdin
     parser = Parser.Parser(lexer)
     sym_tab = Symbols.SymTab()
     code_emitter = CodeEmit.CodeEmitter(sym_tab)
