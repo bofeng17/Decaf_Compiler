@@ -61,12 +61,12 @@ def t_ID( t):
 def t_FLOAT_CONST( t):
     r'\d+(\.\d+)?(e|E)(\+|-)?\d+|\d+\.\d+'
     t.value = float(t.value)
-    return t # return whole token
+    return t # should return whole token
 
 def t_INT_CONST( t):
     r'\d+'
     t.value = int(t.value)
-    return t # return whole token
+    return t
 
 # Define a rule so we can track line numbers
 # This token doesn't appear in the token list, beacuse it is simply ignored
@@ -74,17 +74,14 @@ def t_newline( t):
     r'\n+'
     t.lexer.lineno += len(t.value)
 
-
-# TODO: 1) Strings must be contained within a single line. 2) deal with \n
 def t_STRING_CONST( t):
     r'".*"'
     t.value = t.value[1:-1]
     return t
 
-# A string containing ignored characters (spaces and tabs)
+# A string containing ignored characters
 t_ignore  = ' \t'
 
-# TODO: two kinds of comments
 def t_comment( t):
     r'//.*|/\*(.|\n)*?\*/'
 
@@ -94,19 +91,16 @@ def t_error( t):
     t.lexer.skip(1)
 
 
-
-lexer = lex.lex()
-def scan(data):
-    # Input
-    lexer.input( data)
-
-def test():
-    # Tokenize
+if __name__ == '__main__':
+    lexer = lex.lex()
+    filename = sys.argv[1];
+    inFile = open(str(filename))
+    inbuf = inFile.read()
     while True:
         tok =  lexer.token()
         # sample output: LexToken(tokenName,tokenLexeme,lineNo,colNo)
         print(tok) # if not tok, return None
         if not tok:
             break      # No more input
-
-
+else:
+    lexer = lex.lex()
