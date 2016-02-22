@@ -234,26 +234,10 @@ if __name__ == '__main__':
     # Build the parser
 
     parser = yacc.yacc()
-
-    s = '''
-        class nrfib{
-        public static void main() {
-        int n, i, fn, fn_prev;
-        n = In.scan_int();
-        fn = 1;
-        fn_1 = 0;
-        for(i=1; i<n; i=i+1) {
-        fn = fn_prev + fn;
-        fn_prev = fn - fn_prev;
-        }
-        Out.print("Fib = ");
-        Out.print(fn);
-        Out.print("\\n");
-        }
-        }
-        '''
     filename = sys.argv[1];
     inFile = open(str(filename))
     inbuf = inFile.read()
     result = parser.parse(inbuf, debug = 1)
     print(result)
+else:
+    parser = yacc.yacc()
