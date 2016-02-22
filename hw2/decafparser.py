@@ -1,14 +1,15 @@
 #!/usr/bin/python
 import ply.yacc as yacc
+import sys
 
 # Get the token map from the lexer.  This is required.
-from DECAFLexer import tokens
+from decaflexer import tokens
 
 precedence = (
         ('right', '='),  # Nonassociative operators
         ('left', 'OR'),  # Nonassociative operators
         ('left', 'AND'),  # Nonassociative operators
-        ('nonassoc', 'EQL', 'UNEQL'),  # Nonassociative operators
+        ('left', 'EQL', 'UNEQL'),  # Nonassociative operators
         ('nonassoc', '<', '>', 'LE', 'GE'),  # Nonassociative operators
         ('left', '+', '-'),
         ('left', '*', '/'),
@@ -19,8 +20,8 @@ precedence = (
 def p_program(p):
 #    '''program : program class_decl
 #        | empty'''
-    '''program : program class_decl
-               | class_decl'''
+    '''program :  class_decl program
+               | empty'''
     print 'program reduce success'
 # action here
 
@@ -178,7 +179,7 @@ def p_expr(p):
         | expr LE expr
         | expr GE expr
         | '+' expr %prec '!'
-        | '-' expr %prec '!' 
+        | '-' expr %prec '!'
         | '!' expr '''
 
 def p_assign(p):
@@ -251,6 +252,8 @@ if __name__ == '__main__':
         }
         }
         '''
-    
-    result = parser.parse(s, debug = 1)
+    filename = sys.argv[1];
+    inFile = open(str(filename))
+    inbuf = inFile.read()
+    result = parser.parse(inbuf, debug = 1)
     print(result)
