@@ -194,8 +194,12 @@ def p_new_array(p):
         | new_array_temp '''
 
 def p_new_array_temp(p):
-    '''new_array_temp : new_array_temp '[' expr ']'
-        | NEW type '[' expr ']' '''
+    '''new_array_temp : NEW type '[' expr ']' new_array_temp2
+        '''
+
+def p_new_array_temp2(p):
+    '''new_array_temp2 : '[' expr ']' new_array_temp2
+                       | empty'''
 
 #def p_arith_op(p):
 #    '''arith_op : '+'
