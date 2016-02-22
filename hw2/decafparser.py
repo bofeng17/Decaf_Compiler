@@ -13,7 +13,7 @@ precedence = (
         ('nonassoc', '<', '>', 'LE', 'GE'),  # Nonassociative operators
         ('left', '+', '-'),
         ('left', '*', '/'),
-        ('right', '!', 'INC', 'DEC'),            # Unary minus operator
+        ('right', '!', 'INC', 'DEC'),            # '!' stands for all unary operators: {+, -, !}
 
 )
 
@@ -194,33 +194,8 @@ def p_new_array(p):
         | new_array_temp '''
 
 def p_new_array_temp(p):
-    '''new_array_temp : NEW type '[' expr ']' new_array_temp2
-        '''
-
-def p_new_array_temp2(p):
-    '''new_array_temp2 : '[' expr ']' new_array_temp2
-                       | empty'''
-
-#def p_arith_op(p):
-#    '''arith_op : '+'
-#        | '-'
-#        | '*'
-#        | '/' '''
-
-#def p_bool_op(p):
-#    '''bool_op : AND
-#        | OR
-#        | EQL
-#        | UNEQL
-#        | '<'
-#        | '>'
-#        | LE
-#        | GE'''
-
-#def p_unary_op(p):
-#    '''unary_op : '+'
-#        | '-'
-#        | '!' '''
+    '''new_array_temp : new_array_temp '[' expr ']'
+        | NEW type '[' expr ']' '''
 
 def p_stmt_expr(p):
     '''stmt_expr : assign
