@@ -1,14 +1,20 @@
 #!/usr/bin/python
-import sys, os
-from decafparser import parser
+import os
+import argparse
+from decafparser import decaf_parser
 
-try:
-    filename = sys.argv[1];
-except IndexError:
+arg_parser = argparse.ArgumentParser(description='Decaf language checker')
+arg_parser.add_argument('filename', help='file to compile')
+arg_parser.add_argument('-d', action='store_true', help='enable debug mode')
+args = arg_parser.parse_args()
+
+if not args.filename:
     filename = "test_files/test_helloworld.dc"
-
-inFile = open(str(filename))
+inFile = open(args.filename)
 inbuf = inFile.read()
-result = parser.parse(inbuf, debug = 1)
-print(result)
-os.system("rm *.pyc");
+inFile.close()
+decaf_parser.parse(inbuf, debug=args.d)
+try:
+    os.system("rm *.pyc");
+except:
+    pass

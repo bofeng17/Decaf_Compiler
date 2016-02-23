@@ -1,9 +1,8 @@
 #!/usr/bin/python
 import ply.yacc as yacc
 import sys
-
-# Get the token map from the lexer.  This is required.
 from decaflexer import tokens
+
 
 precedence = (
         ('right', '='),  # Nonassociative operators
@@ -11,6 +10,8 @@ precedence = (
         ('left', 'AND'),  # Nonassociative operators
         ('left', 'EQL', 'UNEQL'),  # Nonassociative operators
         ('nonassoc', '<', '>', 'LE', 'GE'),  # Nonassociative operators
+        ('nonassoc', '['),  # Nonassociative operators
+        ('nonassoc', ']'),  # Nonassociative operators
         ('left', '+', '-'),
         ('left', '*', '/'),
         ('right', '!', 'INC', 'DEC'),            # Unary minus operator
@@ -18,17 +19,14 @@ precedence = (
 )
 
 def p_program(p):
-#    '''program : program class_decl
-#        | empty'''
     '''program :  class_decl program
                | empty'''
-    print 'program reduce success'
-# action here
+    raise SyntaxError
+    print "success"
 
 def p_class_decl(p):
     '''class_decl : CLASS ID '{' class_body_decls '}'
         | CLASS ID '(' EXTENDS ID ')' '{' class_body_decls '}' '''
-    print 'class_decl'
 
 def p_class_body_decls(p):
     '''class_body_decls : class_body_decls class_body_decl
@@ -76,10 +74,6 @@ def p_method_decl(p):
         | modifier VOID ID '(' formals ')' block
         | modifier type ID '(' ')' block
         | modifier VOID ID '(' ')' block'''
-
-#def p_all_type(p):
-#    '''all_type : type
-#        | VOID'''
 
 def p_constructor_decl(p):
     '''constructor_decl : modifier ID '(' formals ')' block
@@ -190,37 +184,16 @@ def p_assign(p):
         | DEC lhs'''
 
 def p_new_array(p):
-    '''new_array : new_array '[' ']'
-        | new_array_temp '''
+    '''new_array : NEW type dim_expr dim'''
 
-def p_new_array_temp(p):
-    '''new_array_temp : NEW type '[' expr ']' new_array_temp2
-        '''
-
-def p_new_array_temp2(p):
-    '''new_array_temp2 : '[' expr ']' new_array_temp2
-                       | empty'''
-
-#def p_arith_op(p):
-#    '''arith_op : '+'
-#        | '-'
-#        | '*'
-#        | '/' '''
-
-#def p_bool_op(p):
-#    '''bool_op : AND
-#        | OR
-#        | EQL
-#        | UNEQL
-#        | '<'
-#        | '>'
-#        | LE
-#        | GE'''
-
-#def p_unary_op(p):
-#    '''unary_op : '+'
-#        | '-'
-#        | '!' '''
+def p_dim_expr(p):
+    '''dim_expr : '[' expr ']' dim_expr
+        | '[' expr ']'
+    '''
+def p_dim(p):
+    '''dim : '[' ']' dim
+        | empty
+    '''
 
 def p_stmt_expr(p):
     '''stmt_expr : assign
@@ -236,12 +209,11 @@ def p_error(p):
 
 if __name__ == '__main__':
     # Build the parser
-
-    parser = yacc.yacc()
+    decaf_parser = yacc.yacc()
     filename = sys.argv[1];
     inFile = open(str(filename))
     inbuf = inFile.read()
-    result = parser.parse(inbuf, debug = 1)
+    result = decaf_parser.parse(inbuf, debug = 1)
     print(result)
 else:
-    parser = yacc.yacc()
+    decaf_parser = yacc.yacc()
