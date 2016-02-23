@@ -86,15 +86,12 @@ def t_comment( t):
     r'//.*|/\*(.|\n)*?\*/'
 
 # Error handling rule
-def t_error( t):
-    print("Illegal character '%s'" % t.value[0])
-    t.lexer.skip(1)
+def t_error(t):
+    print ("row %s col %s| error: Illegal character '%s'" % (t.lineno, t.lexpos, t.value[0]))
 
 
 if __name__ == '__main__':
     lexer = lex.lex()
-    filename = sys.argv[1];
-    inFile = open(str(filename))
     inbuf = inFile.read()
     while True:
         tok =  lexer.token()

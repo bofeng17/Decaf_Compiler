@@ -3,6 +3,8 @@ import ply.yacc as yacc
 import sys
 from decaflexer import tokens
 
+def error_on(tok, msg):
+    print "row %s, col %s| syntax error: %s, input is %s"%(tok.lineno, tok.lexpos, msg, tok.value)
 
 precedence = (
         ('right', '='),  # Nonassociative operators
@@ -10,19 +12,19 @@ precedence = (
         ('left', 'AND'),  # Nonassociative operators
         ('left', 'EQL', 'UNEQL'),  # Nonassociative operators
         ('nonassoc', '<', '>', 'LE', 'GE'),  # Nonassociative operators
-        ('nonassoc', '['),  # Nonassociative operators
-        ('nonassoc', ']'),  # Nonassociative operators
         ('left', '+', '-'),
         ('left', '*', '/'),
         ('right', '!', 'INC', 'DEC'),            # '!' stands for all unary operators: {+, -, !}
+        ('nonassoc', '['),  # Nonassociative operators
+        ('nonassoc', ']'),  # Nonassociative operators
 
 )
 
 def p_program(p):
     '''program :  class_decl program
-               | empty'''
-    raise SyntaxError
-    print "success"
+            | class_decl'''
+    print 'success'
+
 
 def p_class_decl(p):
     '''class_decl : CLASS ID '{' class_body_decls '}'
@@ -38,7 +40,7 @@ def p_class_body_decl(p):
         | constructor_decl'''
 
 def p_field_decl(p):
-    '''field_decl : modifier var_decl'''
+    '''field_decl : modifier var_decl '''
 
 def p_modifier(p):
     '''modifier : access class_member'''
@@ -53,7 +55,9 @@ def p_class_member(p):
         | empty'''
 
 def p_var_decl(p):
-    '''var_decl : type variables'''
+    '''var_decl : type variables  ';'  '''
+
+
 
 def p_type(p):
     '''type : INT
@@ -191,7 +195,7 @@ def p_dim_expr(p):
         | '[' expr ']'
     '''
 def p_dim(p):
-    '''dim : dim '[' ']'
+    '''dim : '[' ']' dim
         | empty
     '''
 def p_stmt_expr(p):
@@ -204,7 +208,14 @@ def p_empty(p):
 
 # Error rule for syntax errors
 def p_error(p):
-    print("Syntax error in input!")
+    error_on(p, 'Ops something is wrong')
+    if not p:
+        print("End of File!")
+        return
+    while True:
+        tok = decaf_parser.token()
+        if not tok or tok.type == ';': break
+    decaf_parser.restart()
 
 if __name__ == '__main__':
     # Build the parser

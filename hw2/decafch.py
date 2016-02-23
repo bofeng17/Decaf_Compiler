@@ -8,13 +8,15 @@ arg_parser.add_argument('filename', help='file to compile')
 arg_parser.add_argument('-d', action='store_true', help='enable debug mode')
 args = arg_parser.parse_args()
 
-if not args.filename:
-    filename = "test_files/test_helloworld.dc"
-inFile = open(args.filename)
-inbuf = inFile.read()
-inFile.close()
-decaf_parser.parse(inbuf, debug=args.d)
 try:
-    os.system("rm *.pyc");
-except:
-    pass
+    inFile = open(args.filename)
+    inbuf = inFile.read()
+    inFile.close()
+    if len(inbuf) <= 0:
+        print "empty file"
+    else:
+        decaf_parser.parse(inbuf, debug=args.d)
+        os.system("rm *.pyc");
+
+except IOError:
+    print args.filename+ ' not exist'
