@@ -14,7 +14,7 @@ precedence = (
         ('nonassoc', ']'),  # Nonassociative operators
         ('left', '+', '-'),
         ('left', '*', '/'),
-        ('right', '!', 'INC', 'DEC'),            # Unary minus operator
+        ('right', '!', 'INC', 'DEC'),            # '!' stands for all unary operators: {+, -, !}
 
 )
 
@@ -187,14 +187,13 @@ def p_new_array(p):
     '''new_array : NEW type dim_expr dim'''
 
 def p_dim_expr(p):
-    '''dim_expr : '[' expr ']' dim_expr
+    '''dim_expr : dim_expr '[' expr ']'
         | '[' expr ']'
     '''
 def p_dim(p):
-    '''dim : '[' ']' dim
+    '''dim : dim '[' ']'
         | empty
     '''
-
 def p_stmt_expr(p):
     '''stmt_expr : assign
         | method_invocation'''
