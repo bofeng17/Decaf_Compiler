@@ -21,14 +21,12 @@ precedence = (
 )
 
 def p_program(p):
-    '''program :  class_decl program
-            | class_decl'''
-    print 'success'
-
+    '''program : program class_decl 
+        | class_decl'''
 
 def p_class_decl(p):
     '''class_decl : CLASS ID '{' class_body_decls '}'
-        | CLASS ID '(' EXTENDS ID ')' '{' class_body_decls '}' '''
+        | CLASS ID EXTENDS ID '{' class_body_decls '}' '''
 
 def p_class_body_decls(p):
     '''class_body_decls : class_body_decls class_body_decl
@@ -43,21 +41,19 @@ def p_field_decl(p):
     '''field_decl : modifier var_decl '''
 
 def p_modifier(p):
-    '''modifier : access class_member'''
+    '''modifier : access has_static'''
 
 def p_access(p):
     '''access : PUBLIC
         | PRIVATE
-        |  empty'''
+        | empty'''
 
-def p_class_member(p):
-    '''class_member : STATIC
+def p_has_static(p):
+    '''has_static : STATIC
         | empty'''
 
 def p_var_decl(p):
     '''var_decl : type variables  ';'  '''
-
-
 
 def p_type(p):
     '''type : INT
@@ -74,14 +70,15 @@ def p_variable(p):
         | ID'''
 
 def p_method_decl(p):
-    '''method_decl : modifier type ID '(' formals ')' block
-        | modifier VOID ID '(' formals ')' block
-        | modifier type ID '(' ')' block
-        | modifier VOID ID '(' ')' block'''
+    '''method_decl : modifier type ID '(' has_formals ')' block
+        | modifier VOID ID '(' has_formals ')' block'''
 
 def p_constructor_decl(p):
-    '''constructor_decl : modifier ID '(' formals ')' block
-        | modifier ID '(' ')' block'''
+    '''constructor_decl : modifier ID '(' has_formals ')' block'''
+
+def p_has_formals(p):
+    ''' has_formals : formals
+                    | empty '''
 
 def p_formals(p):
     '''formals : formals ',' formal_param
@@ -168,6 +165,7 @@ def p_expr(p):
         | expr '-' expr
         | expr '*' expr
         | expr '/' expr
+        
         | expr AND expr
         | expr OR expr
         | expr EQL expr
@@ -176,6 +174,7 @@ def p_expr(p):
         | expr '>' expr
         | expr LE expr
         | expr GE expr
+        
         | '+' expr %prec '!'
         | '-' expr %prec '!'
         | '!' expr '''
