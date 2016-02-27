@@ -4,6 +4,26 @@ Yaohui Chen, Bo Feng
 
 To run: 
 do "./decafch.py file_name_to_check"
+
+======================================================================
+
+Content:
+decafch.py: top-level glue code, parse command line arguments
+decaflexer.py: token definition
+decafparser.py: productions, error recovery
+======================================================================
+
+Conflict:
+1) In state 192: 
+For ELSE, it can either shift along: (48) has_else -> . ELSE stmt, or reduce as: (107) empty -> .
+The shift/reduce conflict is resolved as shift.
+
+
+
+
+
+
+
 ======================================================================
 
 Grammar (in Backus-Naur Form): 
@@ -14,38 +34,38 @@ The regular expression-like notations in Extended Backus-Naur Form Grammar descr
 	For '*' or '+', we transform them into left-recursive grammar, which is prefered by LALR parser. For example, "program ::= class_decl*" is transformed into "program -> class_decl program | empty". There is one exception for "new_array ::= new type ([expr])+([])*", we transform ([])* into right recursive grammar to avoid shift-reduce conflict in an efficient way
 	For '?', we add a new non-terminal sysbol named "has_xxx", For example, "stmt ::= for ( stmt_expr? ; expr? ; stmt_expr? ) stmt" is tranformed into "stmt -> FOR ( has_stmt_expr ; has_expr ; has_stmt_expr ) stmt" and "has_stmt_expr -> stmt | empty"
 
-Rule 0     S' -> program
-Rule 1     program -> class_decl program
-Rule 2     program -> empty
-Rule 3     class_decl -> CLASS ID { class_body_decls }
-Rule 4     class_decl -> CLASS ID ( EXTENDS ID ) { class_body_decls }
-Rule 5     class_body_decls -> class_body_decls class_body_decl
-Rule 6     class_body_decls -> class_body_decl
-Rule 7     class_body_decl -> field_decl
-Rule 8     class_body_decl -> method_decl
-Rule 9     class_body_decl -> constructor_decl
-Rule 10    field_decl -> modifier var_decl
-Rule 11    modifier -> access class_member
-Rule 12    access -> PUBLIC
-Rule 13    access -> PRIVATE
-Rule 14    access -> empty
-Rule 15    class_member -> STATIC
-Rule 16    class_member -> empty
-Rule 17    var_decl -> type variables
-Rule 18    type -> INT
-Rule 19    type -> FLOAT
-Rule 20    type -> BOOLEAN
-Rule 21    type -> ID
-Rule 22    variables -> variables , variable
-Rule 23    variables -> variable
-Rule 24    variable -> variable [ ]
-Rule 25    variable -> ID
-Rule 26    method_decl -> modifier type ID ( formals ) block
-Rule 27    method_decl -> modifier VOID ID ( formals ) block
-Rule 28    method_decl -> modifier type ID ( ) block
-Rule 29    method_decl -> modifier VOID ID ( ) block
-Rule 30    constructor_decl -> modifier ID ( formals ) block
-Rule 31    constructor_decl -> modifier ID ( ) block
+Rule 0     S' -> start
+Rule 1     start -> program
+Rule 2     program -> program class_decl
+Rule 3     program -> empty
+Rule 4     class_decl -> CLASS ID { class_body_decls }
+Rule 5     class_decl -> CLASS ID EXTENDS ID { class_body_decls }
+Rule 6     class_body_decls -> class_body_decls class_body_decl
+Rule 7     class_body_decls -> class_body_decl
+Rule 8     class_body_decl -> field_decl
+Rule 9     class_body_decl -> method_decl
+Rule 10    class_body_decl -> constructor_decl
+Rule 11    field_decl -> modifier var_decl
+Rule 12    modifier -> access has_static
+Rule 13    access -> PUBLIC
+Rule 14    access -> PRIVATE
+Rule 15    access -> empty
+Rule 16    has_static -> STATIC
+Rule 17    has_static -> empty
+Rule 18    var_decl -> type variables ;
+Rule 19    type -> INT
+Rule 20    type -> FLOAT
+Rule 21    type -> BOOLEAN
+Rule 22    type -> ID
+Rule 23    variables -> variables , variable
+Rule 24    variables -> variable
+Rule 25    variable -> variable [ ]
+Rule 26    variable -> ID
+Rule 27    method_decl -> modifier type ID ( has_formals ) block
+Rule 28    method_decl -> modifier VOID ID ( has_formals ) block
+Rule 29    constructor_decl -> modifier ID ( has_formals ) block
+Rule 30    has_formals -> formals
+Rule 31    has_formals -> empty
 Rule 32    formals -> formals , formal_param
 Rule 33    formals -> formal_param
 Rule 34    formal_param -> type variable
@@ -114,33 +134,27 @@ Rule 96    assign -> lhs INC
 Rule 97    assign -> INC lhs
 Rule 98    assign -> lhs DEC
 Rule 99    assign -> DEC lhs
-Rule 100   new_array -> new_array [ ]
-Rule 101   new_array -> new_array_temp
-Rule 102   new_array_temp -> NEW type [ expr ] new_array_temp2
-Rule 103   new_array_temp2 -> [ expr ] new_array_temp2
-Rule 104   new_array_temp2 -> empty
+Rule 100   new_array -> NEW type dim_expr dim
+Rule 101   dim_expr -> dim_expr [ expr ]
+Rule 102   dim_expr -> [ expr ]
+Rule 103   dim -> [ ] dim
+Rule 104   dim -> empty
 Rule 105   stmt_expr -> assign
 Rule 106   stmt_expr -> method_invocation
 Rule 107   empty -> <empty>
 
 Along with precedence and associavity table:
 precedence = (
-        ('right', '='),  
+        ('right', '='), 
         ('left', 'OR'),  
-        ('left', 'AND'),  
+        ('left', 'AND'), 
         ('left', 'EQL', 'UNEQL'),  
         ('nonassoc', '<', '>', 'LE', 'GE'), 
         ('left', '+', '-'),
         ('left', '*', '/'),
-        ('right', '!', 'INC', 'DEC'), # '!' stands for all unary operators: {+, -, !}
-
+        ('right', '!', 'INC', 'DEC'),            # '!' stands for all unary operators: {+, -, !}
+        ('nonassoc', '['),  # Nonassociative operators
+        ('nonassoc', ']'),  # Nonassociative operators
 )
-
-======================================================================
-
-Conflict:
-1) In state 199: 
-For ELSE, it can either shift along: (48) has_else -> . ELSE stmt, or reduce as: (107) empty -> .
-The shift/reduce conflict is resolved as shift.
 
 ======================================================================
