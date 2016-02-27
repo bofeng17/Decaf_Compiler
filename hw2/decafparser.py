@@ -21,11 +21,14 @@ precedence = (
 
 )
 
+def p_start(p):
+    '''start : program'''
+    if error_cnt == 0:
+        print "success"
+
 def p_program(p):
     '''program : program class_decl
         | empty'''
-    if error_cnt == 0:
-        print "success"
 
 def p_class_decl(p):
     '''class_decl : CLASS ID '{' class_body_decls '}'
