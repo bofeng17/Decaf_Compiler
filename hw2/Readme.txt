@@ -11,7 +11,7 @@ Words in UPPERCASE or single character stand for terminals, while words in lower
 Grammar is augmented and S' is the actual start symbol. empty stands for empty sysbol (epsilon)
 
 The regular expression-like notations in Extended Backus-Naur Form Grammar described in the ref. manual are transformed in these ways:
-	For '*' or '+', we transform them into left-recursive grammar, which is prefered by LALR parser. For example, "program ::= class_decl*" is transformed into "program -> class_decl program | empty". There is one exception for "new_array ::= new type ([expr])+([])*", we transform ([expr])+ into right recursive grammar to avoid shift-reduce conflict
+	For '*' or '+', we transform them into left-recursive grammar, which is prefered by LALR parser. For example, "program ::= class_decl*" is transformed into "program -> class_decl program | empty". There is one exception for "new_array ::= new type ([expr])+([])*", we transform ([])* into right recursive grammar to avoid shift-reduce conflict in an efficient way
 	For '?', we add a new non-terminal sysbol named "has_xxx", For example, "stmt ::= for ( stmt_expr? ; expr? ; stmt_expr? ) stmt" is tranformed into "stmt -> FOR ( has_stmt_expr ; has_expr ; has_stmt_expr ) stmt" and "has_stmt_expr -> stmt | empty"
 
 Rule 0     S' -> program
@@ -139,7 +139,7 @@ precedence = (
 ======================================================================
 
 Conflict:
-1) In state 196: 
+1) In state 199: 
 For ELSE, it can either shift along: (48) has_else -> . ELSE stmt, or reduce as: (107) empty -> .
 The shift/reduce conflict is resolved as shift.
 

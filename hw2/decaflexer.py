@@ -88,6 +88,7 @@ def t_comment( t):
 # Error handling rule
 def t_error(t):
     print ("row %s col %s| error: Illegal character '%s'" % (t.lineno, t.lexpos, t.value[0]))
+    t.lexer.skip(1)
 
 
 if __name__ == '__main__':

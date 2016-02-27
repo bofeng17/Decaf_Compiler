@@ -215,7 +215,9 @@ def p_error(p):
     while True:
         tok = decaf_parser.token()
         if not tok or tok.type == ';': break
-    decaf_parser.restart()
+#    decaf_parser.restart()
+    decaf_parser.errok()
+    return tok
 
 if __name__ == '__main__':
     # Build the parser
