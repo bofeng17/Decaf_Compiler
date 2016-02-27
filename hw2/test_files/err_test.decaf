@@ -1,0 +1,8 @@
+class hello_world{
+    public static void main() {
+        int lala;
+        lala  5+-4;
+        this.abc++;
+        -[3+4];
+    } 
+}
