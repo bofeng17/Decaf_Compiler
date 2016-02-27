@@ -3,6 +3,7 @@ import ply.yacc as yacc
 import sys
 from decaflexer import tokens
 
+error_cnt = 0
 def error_on(tok, msg):
     print "row %s, col %s| syntax error: %s, input is %s"%(tok.lineno, tok.lexpos, msg, tok.value)
 
@@ -21,8 +22,10 @@ precedence = (
 )
 
 def p_program(p):
-    '''program : program class_decl 
-        | class_decl'''
+    '''program : program class_decl
+        | empty'''
+    if error_cnt == 0:
+        print "success"
 
 def p_class_decl(p):
     '''class_decl : CLASS ID '{' class_body_decls '}'
@@ -165,7 +168,7 @@ def p_expr(p):
         | expr '-' expr
         | expr '*' expr
         | expr '/' expr
-        
+
         | expr AND expr
         | expr OR expr
         | expr EQL expr
@@ -174,7 +177,7 @@ def p_expr(p):
         | expr '>' expr
         | expr LE expr
         | expr GE expr
-        
+
         | '+' expr %prec '!'
         | '-' expr %prec '!'
         | '!' expr '''
@@ -207,6 +210,8 @@ def p_empty(p):
 
 # Error rule for syntax errors
 def p_error(p):
+    global error_cnt
+    error_cnt += 1
     error_on(p, 'Ops something is wrong')
     if not p:
         print("End of File!")
