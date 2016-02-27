@@ -1,11 +1,13 @@
 #!/usr/bin/python
 import ply.yacc as yacc
+import ply.lex as lex
 import sys
 from decaflexer import tokens
 
 error_cnt = 0
 def error_on(tok, msg):
-    print "row %s, col %s| syntax error: %s, input is %s"%(tok.lineno, tok.lexpos, msg, tok.value)
+    if type(tok) is lex.LexToken:
+        print "row %s, col %s| syntax error: %s, input is %s"%(tok.lineno, tok.lexpos, msg, tok.value)
 
 precedence = (
         ('right', '='),  # Nonassociative operators
