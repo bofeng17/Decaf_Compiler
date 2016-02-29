@@ -7,7 +7,7 @@ from decaflexer import tokens
 error_cnt = 0
 def error_on(tok, msg):
     if type(tok) is lex.LexToken:
-        print "row %s, col %s| syntax error: %s, input is %s"%(tok.lineno, tok.lexpos, msg, tok.value)
+        print "row %s, col %s| syntax error: %s, input should not be %s"%(tok.lineno, tok.lexpos, msg, tok.value)
 
 precedence = (
         ('right', '='),  # Nonassociative operators
