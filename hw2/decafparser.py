@@ -6,7 +6,7 @@ from decaflexer import tokens
 
 error_cnt = 0
 def error_on(tok, msg):
-    if type(tok) is lex.LexToken:
+    if type(tok) is lex.LexToken and tok.value != ';':
         print "row %s, col %s| syntax error: %s, input should not be %s"%(tok.lineno, tok.lexpos, msg, tok.value)
 
 precedence = (
@@ -219,7 +219,7 @@ def p_error(p):
     error_cnt += 1
     error_on(p, 'Ops something is wrong')
     if not p:
-        print("End of File!")
+        print("error: End of File!")
         return
     while True:
         tok = decaf_parser.token()
