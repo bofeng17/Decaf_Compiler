@@ -37,6 +37,7 @@ class Cow extends Animal {
   void InitCow(int h, Animal m, bool spot) {
     isSpotted = spot;
     InitAnimal(h,m);
+    int lala;
   }
   bool IsSpottedCow() {
     return isSpotted;
