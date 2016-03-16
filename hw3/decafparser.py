@@ -29,7 +29,7 @@ precedence = (
 def init():
     decaflexer.errorflag = False
 
-#start = 'visibility_mod'
+start = 'class_body_decl'
 
 ### DECAF Grammar
 
@@ -92,18 +92,21 @@ def p_field_decl(p):
         # var_decl: [var1, var2, ...]
         # var: [fieldName, typeRecord(a list)]
         p[0].append(ast.FieldRecord(var[0], None, p[1][0], p[1][1], var[1]))
-    print 'xxx,', p[0]
 
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
-    p[0] = ast.MethodRecord(p[3], p[1][0], p[1][1], "void", p[5], p[7]) # TODO: last two
+    p[0] = ast.MethodRecord(p[3], None, p[1][0], p[1][1], "void", p[5].mergeRecordList(p[7][0]), p[7][1]) # TODO: verify last two
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
-    p[0] = ast.MethodRecord(p[3], p[1][0], p[1][1], p[2], p[5], p[7]) # TODO: last two
+    # TODO: verify last two
+    # p[5]: VariableTable for all formals, needs to merge with VariableRecord for all locals
+    # p[7]: [list of variableRecord, statementRecord]
+    p[0] = ast.MethodRecord(p[3], None, p[1][0], p[1][1], p[2], p[5].mergeRecordList(p[7][0]), p[7][1])
 
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
-    p[0] = ast.CtorRecord(p[1][0], p[4], p[4] + p[6], p[6]) # TODO: last two
+    p[0] = ast.CtorRecord(p[1][0], p[4].getAllFormals(), p[4].mergeRecordList(p[6][0]), p[6][1]) # TODO: verify last two
+
 
 
 def p_mod(p):
@@ -131,6 +134,7 @@ def p_var_decl(p):
     'var_decl : type var_list SEMICOLON'
     for var in p[2]:
         var[1].append(p[1])
+        # var[1]: type(list) of var, e.g. [array, array, int]
     p[0] = p[2]
 
 def p_type_int(p):
@@ -167,14 +171,15 @@ def p_var_array(p):
 
 def p_param_list_opt(p):
     'param_list_opt : param_list'
-    pass
+    p[0] = p[1]
 def p_param_list_empty(p):
     'param_list_opt : '
-    pass
+    p[0] = None # TODO: pass an empty VariableTable or None?
 
 def p_param_list(p):
     'param_list : param_list COMMA param'
-    p[1].append(p[3])
+    p[3].setVarId(p[1].assignId())
+    p[1].AddVar(p[3])
     p[0] = p[1]
 def p_param_list_single(p):
     'param_list : param'
@@ -192,7 +197,8 @@ def p_param(p):
 
 def p_block(p):
     'block : LBRACE stmt_list RBRACE'
-    pass
+    # TODO: stub
+    p[0] = [[],0]
 def p_block_error(p):
     'block : LBRACE stmt_list error RBRACE'
     # error within a block; skip to enclosing block

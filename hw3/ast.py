@@ -17,12 +17,20 @@ class VariableRecord:
     def __init__(self, varName, varId, varKind, varType):
         self.__varName = varName
         self.__varId = varId
-        self.__varKind = varKind
+        self.__varKind = varKind # str: formal or local
         self.__varType = varType
     def SetKind(self, kind):
         self.__varKind = kind
     def SetType(self, varType):
         self.__varType = varType
+
+    def getVarType(self):
+        return self.__varType
+    def getVarId(self):
+        return self.__varId
+
+    def setVarId(self, varId):
+        self.__varId = varId;
 
 class VariableTable:
     """A table of variables for a ctor/method"""
@@ -35,8 +43,18 @@ class VariableTable:
         return self.__curVarId;
     def AddVar(self, varRecord):
         self.__varTable.append(varRecord)
-    def setVarId(self, varId):
-        self.__varId = varId;
+    
+    def mergeRecordList(self, recList):
+        for rec in recList:
+            rec.setVarId(self.assignId())
+            self.AddVar(rec)
+    
+    def getAllFormals(self):
+        formals = []
+        for var in __varTable:
+            if var.getVarType() == 'formal':
+                 formals.append(var.getVarId())
+        return formals # list of all formal IDs
 
 
 
@@ -54,7 +72,7 @@ class CtorRecord:
     """Record for decaf Constructors"""
     def __init__(self, ctorVis, ctorParams, varTab, ctorBody):
         self.__ctorId = CtorTable.assignId()
-        self.__ctorParams = ctorParams # list of IDs in varTab
+        self.__ctorParams = ctorParams # list of formal IDs in varTab
         self.__varTab = varTab
         self.__ctorBody = ctorBody
         self.__Vis = ctorVis
