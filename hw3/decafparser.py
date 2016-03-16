@@ -91,7 +91,7 @@ def p_field_decl(p):
     for var in p[2]:
         # var_decl: [var1, var2, ...]
         # var: [fieldName, typeRecord(a list)]
-        p[0].append(ast.FieldRecord(var[0], p[1][0], p[1][1], var[1]))
+        p[0].append(ast.FieldRecord(var[0], None, p[1][0], p[1][1], var[1]))
     print 'xxx,', p[0]
 
 def p_method_decl_void(p):
@@ -176,12 +176,15 @@ def p_param_list(p):
     p[0] = p[1]
 def p_param_list_single(p):
     'param_list : param'
-    p[0] = [p[1]]
+    p[0] = ast.VariableTable()
+    p[1].setVarId(p[0].assignId())
+    p[0].AddVar(p[1])
 
 def p_param(p):
     'param : type var'
-    p[2].append(p[1])
-    p[0] = p[2]
+    p[2][1].append(p[1])
+    p[0] = ast.VariableRecord(p[2][0], None, 'formal', p[2][1])
+
 
 # Statements
 

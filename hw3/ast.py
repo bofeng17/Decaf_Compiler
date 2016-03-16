@@ -27,6 +27,8 @@ class VariableTable:
         return self.__curVarId;
     def AddVar(self, varRecord):
         self.__varTable.append(varRecord)
+    def setVarId(self, varId):
+        self.__varId = varId;
 
 
 
@@ -51,10 +53,10 @@ class CtorRecord:
 
 class MethodRecord:
     """Record for decaf methods"""
-    def __init__(self, methName, methVis, methApp, retType, varTab, methBody):
+    def __init__(self, methName, containingCls, methVis, methApp, retType, varTab, methBody):
         self.__methName = methName
         self.__methId = MethodTable.assignId()
-        self.__containingCls = None
+        self.__containingCls = containingCls
         self.__methVis = methVis
         self.__methApp = methApp
         self.__retType = retType
@@ -66,10 +68,10 @@ class MethodRecord:
 
 class FieldRecord:
     """Record for decaf fields"""
-    def __init__(self, fieldName, fieldVis, fieldApp, fieldType):
+    def __init__(self, fieldName, containingCls, fieldVis, fieldApp, fieldType):
         self.__fieldName = fieldName
         self.__fieldId = FieldTable.assignId()
-        self.__containingCls = None
+        self.__containingCls = containingCls
         self.__fieldVis = fieldVis # public or private, default is private
         self.__fieldApp = fieldApp # static or instance
         self.__fieldType = fieldType
