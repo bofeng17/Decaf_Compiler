@@ -1,11 +1,16 @@
+#!/usr/bin/python
+
 import ply.yacc as yacc
 import decaflexer
 from decaflexer import tokens
 #from decaflexer import errorflag
 from decaflexer import lex
+import ast
 
 import sys
 import logging
+from operator import add
+
 precedence = (
     ('right', 'ASSIGN'),
     ('left', 'OR'),
@@ -24,122 +29,139 @@ precedence = (
 def init():
     decaflexer.errorflag = False
 
+#start = 'visibility_mod'
 
 ### DECAF Grammar
 
 # Top-level
 def p_pgm(p):
     'pgm : class_decl_list'
-    pass
 
 def p_class_decl_list_nonempty(p):
     'class_decl_list : class_decl class_decl_list'
+    ast.ClassTable.ClassRecords.append(p[1])
 def p_class_decl_list_empty(p):
     'class_decl_list : '
     pass
 
 def p_class_decl(p):
     'class_decl : CLASS ID extends LBRACE class_body_decl_list RBRACE'
-    pass
+    # class_body_decl_list: [CtorRecord list, MethodRecord list, FieldRecord list]
+    ast.ClassRecord(p[2], p[3], p[5][0], p[5][1], p[5][2])
+    for i in range(1, 3):
+        for record in p[5][i]: # record: each MethodRecord/FieldRecord
+            record.setContainingCls(p[2]) # set ContainingCls field
+
 def p_class_decl_error(p):
     'class_decl : CLASS ID extends LBRACE error RBRACE'
     # error in class declaration; skip to next class decl.
-    pass
+    ast.ClassRecord(p[2], p[3], [], [], []) # empty CtorRecord/MethodRecord/FieldRecord list
+
 
 def p_extends_id(p):
     'extends : EXTENDS ID '
-    pass
+    p[0] = p[2] # p[2]: str of ID.lexeme
 def p_extends_empty(p):
     ' extends : '
-    pass
+    p[0] = None # TODO: empty string or None?
 
 def p_class_body_decl_list_plus(p):
     'class_body_decl_list : class_body_decl_list class_body_decl'
-    pass
+    p[0] = map(add, p[1], p[2])
 def p_class_body_decl_list_single(p):
     'class_body_decl_list : class_body_decl'
-    pass
+    p[0] = p[1]
 
+# class_body_decl: [CtorRecord, MethodRecord, FieldRecord partial list(because we can declare more than one Fields at one time)]
 def p_class_body_decl_field(p):
     'class_body_decl : field_decl'
-    pass
+    p[0] = [[], [], p[1]]
 def p_class_body_decl_method(p):
     'class_body_decl : method_decl'
-    pass
+    p[0] = [[], [p[1]], []]
 def p_class_body_decl_constructor(p):
     'class_body_decl : constructor_decl'
-    pass
+    p[0] = [[p[1]], [], []]
 
 
 # Field/Method/Constructor Declarations
-
 def p_field_decl(p):
     'field_decl : mod var_decl'
-    pass
+    p[0] = []
+    for var in p[2]:
+        # var_decl: [var1, var2, ...]
+        # var: [fieldName, typeRecord(a list)]
+        p[0].append(ast.FieldRecord(var[0], p[1][0], p[1][1], var[1]))
+    print 'xxx,', p[0]
 
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
-    pass
+    p[0] = ast.MethodRecord(p[3], p[1][0], p[1][1], "void", p[5], p[7]) # TODO: last two
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
-    pass
+    p[0] = ast.MethodRecord(p[3], p[1][0], p[1][1], p[2], p[5], p[7]) # TODO: last two
 
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
-    pass
+    p[0] = ast.CtorRecord(p[1][0], p[4], p[4] + p[6], p[6]) # TODO: last two
 
 
 def p_mod(p):
     'mod : visibility_mod storage_mod'
-    pass
+    p[0] = [p[1],p[2]]
 
 def p_visibility_mod_pub(p):
     'visibility_mod : PUBLIC'
-    pass
+    p[0] = p[1]
 def p_visibility_mod_priv(p):
     'visibility_mod : PRIVATE'
-    pass
+    p[0] = p[1]
 def p_visibility_mod_empty(p):
     'visibility_mod : '
-    pass
+    p[0] = "private"
 
 def p_storage_mod_static(p):
     'storage_mod : STATIC'
-    pass
+    p[0] = p[1]
 def p_storage_mod_empty(p):
     'storage_mod : '
-    pass
+    p[0] = "instance"
 
 def p_var_decl(p):
     'var_decl : type var_list SEMICOLON'
-    pass
+    for var in p[2]:
+        var[1].append(p[1])
+    p[0] = p[2]
 
 def p_type_int(p):
     'type :  INT'
-    pass
+    p[0] = p[1]
 def p_type_bool(p):
     'type :  BOOLEAN'
-    pass
+    p[0] = p[1]
 def p_type_float(p):
     'type :  FLOAT'
-    pass
+    p[0] = p[1]
 def p_type_id(p):
     'type :  ID'
-    pass
+    p[0] = p[1]
 
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
-    pass
+    p[1].append(p[3])
+    p[0] = p[1]
 def p_var_list_single(p):
     'var_list : var'
-    pass
+    p[0] = [p[1]]
 
 def p_var_id(p):
     'var : ID'
-    pass
+    # var: [fieldName, typeRecord(a list)]
+    p[0] = [p[1], ast.TypeRecord()]
 def p_var_array(p):
     'var : var LBRACKET RBRACKET'
-    pass
+    p[1][1].append("array")
+    p[0] = p[1]
 
 def p_param_list_opt(p):
     'param_list_opt : param_list'
@@ -150,14 +172,16 @@ def p_param_list_empty(p):
 
 def p_param_list(p):
     'param_list : param_list COMMA param'
-    pass
+    p[1].append(p[3])
+    p[0] = p[1]
 def p_param_list_single(p):
     'param_list : param'
-    pass
+    p[0] = [p[1]]
 
 def p_param(p):
-    'param : type ID'
-    pass
+    'param : type var'
+    p[2].append(p[1])
+    p[0] = p[2]
 
 # Statements
 
@@ -337,7 +361,7 @@ def p_dim_expr_plus(p):
     pass
 def p_dim_expr_single(p):
     'dim_expr_plus : dim_expr'
-    pass
+    p[0] = 1
 
 def p_dim_expr(p):
     'dim_expr : LBRACKET expr RBRACKET'
@@ -369,7 +393,6 @@ def p_expr_empty(p):
     'expr_opt : '
     pass
 
-
 def p_error(p):
     if p is None:
         print ("Unexpected end-of-file")
@@ -383,7 +406,7 @@ def from_file(filename):
     try:
         with open(filename, "rU") as f:
             init()
-            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=True)
+            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=None)
         return not decaflexer.errorflag
     except IOError as e:
         print "I/O error: %s: %s" % (filename, e.strerror)
@@ -395,7 +418,7 @@ if __name__ == "__main__" :
             level=logging.CRITICAL,
     )
     log = logging.getLogger()
-    res = parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=log)
+    res = parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=1)
 
     if parser.errorok :
         print("Parse succeed")
