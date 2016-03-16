@@ -146,6 +146,8 @@ def p_type_id(p):
     'type :  ID'
     p[0] = p[1]
 
+#For var_decl->field_decl->class_body_decl->class_body_decl_list
+#            ->stmt
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
     p[1].append(p[3])
@@ -156,7 +158,7 @@ def p_var_list_single(p):
 
 def p_var_id(p):
     'var : ID'
-    # var: [fieldName, typeRecord(a list)]
+    # var: [varName, typeRecord(a list)]
     p[0] = [p[1], ast.TypeRecord()]
 def p_var_array(p):
     'var : var LBRACKET RBRACKET'

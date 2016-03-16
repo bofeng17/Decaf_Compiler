@@ -8,12 +8,20 @@ class TypeRecord:
 
 
 
+
+
 class VariableRecord:
-    """Record for decaf variables"""
+    """Record for decaf variables
+       varKind: formal/local
+    """
     def __init__(self, varName, varId, varKind, varType):
         self.__varName = varName
         self.__varId = varId
         self.__varKind = varKind
+        self.__varType = varType
+    def SetKind(self, kind):
+        self.__varKind = kind
+    def SetType(self, varType):
         self.__varType = varType
 
 class VariableTable:
@@ -21,7 +29,7 @@ class VariableTable:
     def __init__(self):
         self.__varTable = []
         self.__curVarId = 0
-    
+
     def assignId(self): # Id starts from 1
         self.__curVarId += 1
         return self.__curVarId;
@@ -115,3 +123,15 @@ class FieldTable:
     def assignId(): # Id starts from 1
         FieldTable.CurFieldId += 1
         return FieldTable.CurFieldId;
+
+
+
+
+
+
+
+
+
+
+"""             imtermediate classes                  """
+
