@@ -133,3 +133,71 @@ class FieldTable:
     def assignId(): # Id starts from 1
         FieldTable.CurFieldId += 1
         return FieldTable.CurFieldId;
+
+
+class Stmt:
+    def __init__(self, linenoRange): # linenoRange: [startlineno, endlineno]
+        self.linenoRange = linenoRange
+
+class IfStmt(Stmt):
+    def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
+        self.__condExpr = condExpr # Expr
+        self.__thenStmt = thenStmt # Stmt
+        self.__elseStmt = elseStmt # Stmt, may be None
+        Stmt.__init__(self, linenoRange)
+
+class WhileStmt(Stmt):
+    def __init__(self, linenoRange, conExpr, bodyStmt):
+        self.__condExpr = condExpr # Expr
+        self.__bodyStmt = bodyStmt # Stmt
+        Stmt.__init__(self, linenoRange)
+
+class ForStmt(Stmt):
+    def __init__(self, linenoRange, initExpr, lpCondExpr, updExpr, bodyStmt):
+        self.__initExpr = initExpr # StmtExpr, may be None
+        self.__lpCondExpr = lpCondExpr # Expr, may be None
+        self.__updExpr = updExpr # StmtExpr, may be None
+        self.__bodyStmt = bodyStmt # Stmt
+        Stmt.__init__(self, linenoRange)
+
+class RetStmt(Stmt):
+    def __init__(self, linenoRange, retValExpr = None):
+        self.__retValExpr = retValExpr # Expr, may be None
+        Stmt.__init__(self, linenoRange)
+
+class BlockStmt(Stmt):
+    def __init__(self, linenoRange):
+        self.__StmtList = [] # Stmt object list
+        Stmt.__init__(self, linenoRange)
+    
+    def append(self, item):
+        self.__StmtList.append(item)
+
+class ContStmt(Stmt):
+    def __init__(self, linenoRange):
+        Stmt.__init__(self, linenoRange)
+
+class BrkStmt(Stmt):
+    def __init__(self, linenoRange):
+        Stmt.__init__(self, linenoRange)
+
+class SkipStmt(Stmt):
+    def __init__(self, linenoRange):
+        Stmt.__init__(self, linenoRange)
+
+class StmtExprStmt(Stmt):
+    def __init__(self, linenoRange, StmtExpr):
+        self.__StmtExpr = StmtExpr # TODO: May need one more layer of abstration. AssnExpr/AutoExpr/MethodInvExpr
+        Stmt.__init__(self, linenoRange)
+
+# TODO:
+class VarDeclStmt(Stmt):
+    def __init__(self, linenoRange):
+        Stmt.__init__(self, linenoRange)
+
+
+
+
+
+
+

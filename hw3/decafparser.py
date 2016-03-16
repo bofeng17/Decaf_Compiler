@@ -100,7 +100,7 @@ def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
     # TODO: verify last two
     # p[5]: VariableTable for all formals, needs to merge with VariableRecord for all locals
-    # p[7]: [list of variableRecord, statementRecord]
+    # p[7]: [list of variableRecord, BlockStatement]
     p[0] = ast.MethodRecord(p[3], None, p[1][0], p[1][1], p[2], p[5].mergeRecordList(p[7][0]), p[7][1])
 
 def p_constructor_decl(p):
