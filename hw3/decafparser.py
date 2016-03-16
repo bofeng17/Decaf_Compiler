@@ -383,7 +383,7 @@ def from_file(filename):
     try:
         with open(filename, "rU") as f:
             init()
-            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=None)
+            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=True)
         return not decaflexer.errorflag
     except IOError as e:
         print "I/O error: %s: %s" % (filename, e.strerror)

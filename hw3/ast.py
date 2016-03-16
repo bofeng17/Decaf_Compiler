@@ -1,3 +1,26 @@
+class TypeRecord:
+    """Record for decaf type"""
+    def __init__(self):
+        self.__typeList = []
+
+
+
+class VariableRecord:
+    """Record for decaf variables"""
+    def __init__(self, varName, varId, varKind, varType):
+        self.__varName = varName
+        self.__varId = varId
+        self.__varKind = varKind
+        self.__varType = varType
+
+class VariableTable:
+    """A table of variables for a ctor/method"""
+    def __init__(self):
+        self.__varTable = []
+    def AddVar(self, varRecord):
+        self.__varTable.append(varRecord)
+
+
 class ClassRecord:
     """Record for decaf classes"""
     def __init__(self, clsName, superClsName, ctors, methods, fields):
@@ -38,3 +61,25 @@ class FieldRecord:
         self.__fieldVis = fieldVis
         self.__fieldApp = fieldApp
         self.__fieldType = fieldType
+
+
+
+
+class ClassTable:
+    """The table to store all class intances created"""
+    ClassRecords = []
+
+class CtorTable:
+    """The table to store all Ctor intances created"""
+    CurrentCtorId = 1
+    CtorRecords = []
+
+class MethodTable:
+    """The table to store all method intances created"""
+    CurrentMethodId = 1
+    MethodRecords = []
+
+class FieldTable:
+    """The table to store all method intances created"""
+    CurrentFieldId = 1
+    FieldRecords = []

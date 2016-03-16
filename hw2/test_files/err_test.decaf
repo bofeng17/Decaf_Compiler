@@ -7,7 +7,8 @@ class hello_world{
 void main() {
   Cow betsy;
   Animal b;
-  
+  if(b[2][3])
+    return b;
   betsy.InitCow(5, null, true);
   b = betsy;
   b.GetMom();
