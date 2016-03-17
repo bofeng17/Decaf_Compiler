@@ -241,7 +241,7 @@ def p_stmt_return(p):
     p[0] = ast.RetStmt(p.linespan(0), p[2])
 def p_stmt_stmt_expr(p):
     'stmt : stmt_expr SEMICOLON'
-    p[0] = ast.StmtExprStmt(p.linespan(0) p[1])
+    p[0] = ast.StmtExprStmt(p.linespan(0), p[1])
 def p_stmt_break(p):
     'stmt : BREAK SEMICOLON'
     p[0] = ast.BrkStmt(p.linespan(0))
@@ -252,13 +252,9 @@ def p_stmt_block(p):
     'stmt : block'
     p[0] = p[1] # p[1]: BlockStmt
 def p_stmt_var_decl(p):
-<<<<<<< HEAD
     'stmt : var_decl'
     # TODO: VarDeclStmt is a stub
     p[0] = ast.VarDeclStmt(p.linespan(0))
-=======
-    pass
->>>>>>> f2e455b24e1d1c43e027cf3c5daf56b1510cb948
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
     print("Invalid statement near line {}".format(p.lineno(1)))
