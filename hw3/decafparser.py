@@ -261,37 +261,38 @@ def p_stmt_error(p):
     print("Invalid statement near line {}".format(p.lineno(1)))
     decaflexer.errorflag = True
     p[0] = ast.SkipStmt(p.linespan(0))
-start = 'literal'
+
+
 # Expressions
 def p_literal_int_const(p):
     'literal : INT_CONST'
-    p[0] = ast.ConstExpr(p.linespan(0), 'Integer-constant', p[1])
-    print p[1], type(p[1])
+    p[0] = ast.ConstExpr(p.linespan(0), 'Integer-constant', p[1]) # p[1]: int
 def p_literal_float_const(p):
     'literal : FLOAT_CONST'
-    pass
+    p[0] = ast.ConstExpr(p.linespan(0), 'Float-constant', p[1]) # p[1]: float
 def p_literal_string_const(p):
     'literal : STRING_CONST'
-    pass
+    p[0] = ast.ConstExpr(p.linespan(0), 'String-constant', p[1]) # p[1]: str
 def p_literal_null(p):
     'literal : NULL'
-    pass
+    p[0] = ast.ConstExpr(p.linespan(0), 'Null', None)
 def p_literal_true(p):
     'literal : TRUE'
-    pass
+    p[0] = ast.ConstExpr(p.linespan(0), 'True', None)
 def p_literal_false(p):
     'literal : FALSE'
-    pass
+    p[0] = ast.ConstExpr(p.linespan(0), 'False', None)
 
+# TODO: primary may need additional layer of abstration
 def p_primary_literal(p):
     'primary : literal'
-    pass
+    p[0] = p[1] # p[1]: constExpr
 def p_primary_this(p):
     'primary : THIS'
-    pass
+    p[0] = ast.ThisExpr(p.linespan(0))
 def p_primary_super(p):
     'primary : SUPER'
-    pass
+    p[0] = ast.SuperExpr(p.linespan(0))
 def p_primary_paren(p):
     'primary : LPAREN expr RPAREN'
     pass
@@ -358,28 +359,24 @@ def p_expr_binop(p):
             | expr AND expr
             | expr OR expr
     '''
-    pass
+    p[0] = ast.BinaryExpr(p.linespan(0), p[1], p[2], p[3])
 def p_expr_unop(p):
     '''expr : PLUS expr %prec UMINUS
             | MINUS expr %prec UMINUS
             | NOT expr'''
-    pass
+    p[0] = ast.UnaryExpr(p.linespan(0), p[2], p[1])
 
 def p_assign_equals(p):
     'assign : lhs ASSIGN expr'
-    pass
-def p_assign_post_inc(p):
-    'assign : lhs INC'
-    pass
-def p_assign_pre_inc(p):
-    'assign : INC lhs'
-    pass
-def p_assign_post_dec(p):
-    'assign : lhs DEC'
-    pass
-def p_assign_pre_dec(p):
-    'assign : DEC lhs'
-    pass
+    p[0] = ast.AssnExpr(p.linespan(0), p[1], p[3])
+def p_assign_post(p):
+    '''assign : lhs INC
+              | lhs DEC'''
+    p[0] = ast.AutoExpr(p.linespan(0), p[1], p[2], 'post')
+def p_assign_pre(p):
+    '''assign : INC lhs
+            | DEC lhs'''
+    p[0] = ast.AutoExpr(p.linespan(0), p[2], p[1], 'pre')
 
 def p_new_array(p):
     'new_array : NEW type dim_expr_plus dim_star'

@@ -322,8 +322,8 @@ class Expr:
 
 class ConstExpr(Expr):
     def __init__(self, linenoRange, type, val):
-        self.__type = type # str: 'Integer-constant'
-        self.__val = val # int: 'Integer-constant', 
+        self.__type = type # str: 'Integer-constant', 'Float-constant', 'String-constant', 'Null', 'True', 'False'
+        self.__val = val # int: 'Integer-constant', float: 'Float-constant', str: 'String-constant', None for others
         Expr.__init__(self, linenoRange)
 
 class VarExpr(Expr):
@@ -332,13 +332,16 @@ class VarExpr(Expr):
         Expr.__init__(self, linenoRange)
 
 class UnaryExpr(Expr):
-    def __init__(self, linenoRange):
-        
+    def __init__(self, linenoRange, operand, uniaryOperator):
+        self.__init__operand = operand; # Expr
+        self.__uniaryOperator = uniaryOperator; # str
         Expr.__init__(self, linenoRange)
 
 class BinaryExpr(Expr):
-    def __init__(self, linenoRange):
-        
+    def __init__(self, linenoRange, operand1, operator, operand2):
+        self.__init__operand1 = operand1; # Expr
+        self.__init__operator = operator; # str
+        self.__init__operand2 = operand2; # Expr
         Expr.__init__(self, linenoRange)
 
 class AssnExpr(Expr):
@@ -373,12 +376,10 @@ class NewObjExpr(Expr):
 
 class ThisExpr(Expr):
     def __init__(self, linenoRange):
-        
         Expr.__init__(self, linenoRange)
 
 class SuperExpr(Expr):
     def __init__(self, linenoRange):
-        
         Expr.__init__(self, linenoRange)
 
 class ClsRefExpr(Expr):
