@@ -214,12 +214,13 @@ def p_block_error(p):
     # TODO: AST for error block
     p[0] = p[2]
 
+#stmt_list type: BlockStmt
 def p_stmt_list_empty(p):
     'stmt_list : '
     p[0] = ast.BlockStmt(p.linespan(0))
 def p_stmt_list(p):
     'stmt_list : stmt_list stmt'
-    p[1].append(p[2])
+    p[1].addStmt(p[2])
     p[1].setLinenoRange(p.linespan(0))
     p[0] = p[1]
 
@@ -260,11 +261,12 @@ def p_stmt_error(p):
     print("Invalid statement near line {}".format(p.lineno(1)))
     decaflexer.errorflag = True
     p[0] = ast.SkipStmt(p.linespan(0))
-
+start = 'literal'
 # Expressions
 def p_literal_int_const(p):
     'literal : INT_CONST'
-    pass
+    p[0] = ast.ConstExpr(p.linespan(0), 'Integer-constant', p[1])
+    print p[1], type(p[1])
 def p_literal_float_const(p):
     'literal : FLOAT_CONST'
     pass

@@ -253,10 +253,12 @@ class cls_body_decl_list:
 
 class Stmt:
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
-        self.linenoRange = linenoRange
-    
+        self.__linenoRange = linenoRange
+
     def setLinenoRange(self, range):
-        self.linenoRange = range
+        self.__linenoRange = range
+    def getLinenoRange(self):
+        return self.__linenoRange
 
 class IfStmt(Stmt):
     def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
@@ -266,7 +268,7 @@ class IfStmt(Stmt):
         Stmt.__init__(self, linenoRange)
 
 class WhileStmt(Stmt):
-    def __init__(self, linenoRange, conExpr, bodyStmt):
+    def __init__(self, linenoRange, condExpr, bodyStmt):
         self.__condExpr = condExpr # Expr
         self.__bodyStmt = bodyStmt # Stmt
         Stmt.__init__(self, linenoRange)
@@ -289,7 +291,7 @@ class BlockStmt(Stmt):
         self.__StmtList = [] # Stmt object list
         Stmt.__init__(self, linenoRange)
 
-    def append(self, item):
+    def addStmt(self, item):
         self.__StmtList.append(item)
 
 class ContStmt(Stmt):
@@ -319,34 +321,38 @@ class VarDeclStmt(Stmt):
 class Expr:
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
+    def setLinenoRange(self, linenoRange):
+        self.__linenoRange = linenoRange
+    def getLinenoRange(self):
+        return self.__linenoRange
 
 class ConstExpr(Expr):
     def __init__(self, linenoRange, type, val):
         self.__type = type # str: 'Integer-constant'
-        self.__val = val # str:
-        Expr.__init__(linenoRange)
+        self.__val = val # int: 'Integer-constant',
+        Expr.__init__(self, linenoRange)
 
 class VarExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class UnaryExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class BinaryExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class AssnExpr(Expr):
     def __init__(self, linenoRange, lhs, rhs):
         # TODO: May need one more layer of abstration.
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__rhs = rhs # Expr
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class AutoExpr(Expr):
     def __init__(self, linenoRange, lhs, operator, loc):
@@ -354,47 +360,47 @@ class AutoExpr(Expr):
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__operator = operator # str: 'inc' or 'dec'
         self.__loc = loc # str: 'post' or 'pre'
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class FieldAccExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class MethodInvExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class ThisExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class SuperExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class ClsRefExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class ArryAccExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 class NewArryExpr(Expr):
     def __init__(self, linenoRange):
-        
-        Expr.__init__(linenoRange)
+
+        Expr.__init__(self, linenoRange)
 
 
 
