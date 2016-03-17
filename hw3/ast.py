@@ -323,30 +323,30 @@ class Expr:
 class ConstExpr(Expr):
     def __init__(self, linenoRange, type, val):
         self.__type = type # str: 'Integer-constant'
-        self.__val = val # str:
-        Expr.__init__(linenoRange)
+        self.__val = val # int: 'Integer-constant', 
+        Expr.__init__(self, linenoRange)
 
 class VarExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class UnaryExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class BinaryExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class AssnExpr(Expr):
     def __init__(self, linenoRange, lhs, rhs):
         # TODO: May need one more layer of abstration.
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__rhs = rhs # Expr
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class AutoExpr(Expr):
     def __init__(self, linenoRange, lhs, operator, loc):
@@ -354,47 +354,47 @@ class AutoExpr(Expr):
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__operator = operator # str: 'inc' or 'dec'
         self.__loc = loc # str: 'post' or 'pre'
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class FieldAccExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class MethodInvExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class ThisExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class SuperExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class ClsRefExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class ArryAccExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 class NewArryExpr(Expr):
     def __init__(self, linenoRange):
         
-        Expr.__init__(linenoRange)
+        Expr.__init__(self, linenoRange)
 
 
 
