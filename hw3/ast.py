@@ -1,3 +1,4 @@
+from operator import add
 class TypeRecord:
     """Record for decaf type"""
     def __init__(self):
@@ -32,29 +33,6 @@ class VariableRecord:
     def setVarId(self, varId):
         self.__varId = varId;
 
-class VariableTable:
-    """A table of variables for a ctor/method"""
-    def __init__(self):
-        self.__varTable = []
-        self.__curVarId = 0
-
-    def assignId(self): # Id starts from 1
-        self.__curVarId += 1
-        return self.__curVarId;
-    def AddVar(self, varRecord):
-        self.__varTable.append(varRecord)
-    
-    def mergeRecordList(self, recList):
-        for rec in recList:
-            rec.setVarId(self.assignId())
-            self.AddVar(rec)
-    
-    def getAllFormals(self):
-        formals = []
-        for var in __varTable:
-            if var.getVarType() == 'formal':
-                 formals.append(var.getVarId())
-        return formals # list of all formal IDs
 
 
 
@@ -92,18 +70,6 @@ class MethodRecord:
     def setContainingCls(self, clsName):
         self.__containingCls = clsName
 
-class FieldRecord:
-    """Record for decaf fields"""
-    def __init__(self, fieldName, containingCls, fieldVis, fieldApp, fieldType):
-        self.__fieldName = fieldName
-        self.__fieldId = FieldTable.assignId()
-        self.__containingCls = containingCls
-        self.__fieldVis = fieldVis # public or private, default is private
-        self.__fieldApp = fieldApp # static or instance
-        self.__fieldType = fieldType
-
-    def setContainingCls(self, clsName):
-            self.__containingCls = clsName
 
 
 
@@ -141,15 +107,145 @@ class FieldTable:
     def assignId(): # Id starts from 1
         FieldTable.CurFieldId += 1
         return FieldTable.CurFieldId;
+    @staticmethod
+    def addFieldToGlobFieldTab(field):
+        FieldTable.FieldRecords.append(field)
 
 
 
 
 
 
+class VariableTable:
+    """A table of variables for a ctor/method"""
+    def __init__(self):
+        self.__varTable = []
+        self.__curVarId = 0
+
+    def assignId(self): # Id starts from 1
+        self.__curVarId += 1
+        return self.__curVarId;
+    def AddVar(self, varRecord):
+        self.__varTable.append(varRecord)
+
+    def mergeRecordList(self, recList):
+        for rec in recList:
+            rec.setVarId(self.assignId())
+            self.AddVar(rec)
+
+    def getAllFormals(self):
+        formals = []
+        for var in self.__varTable:
+            if var.getVarType() == 'formal':
+                 formals.append(var.getVarId())
+        return formals # list of all formal IDs
 
 
 
 
-"""             imtermediate classes                  """
+class var_cls:
+    def __init__(self, varId, arrayDim, varType, lineno):
+        self.__varId = varId
+        self.__arrayDim = arrayDim
+        self.__lineno = lineno
+        self.__varType = varType
+    def addArrayDim(self):
+        self.__arrayDim.append('array')
+    def setType(self, varType):
+        self.__varType = varType
+    def getVarId(self):
+        return self.__varId
+    def getType(self):
+        return self.__varType
 
+class var_cls_list:
+    def __init__(self):
+        self.__var_list = []
+    def addVar(self, var):
+        self.__var_list.append(var)
+    def setType(self, varType):
+        for var in self.__var_list:
+            var.setType(varType)
+class field_cls_list:
+    def __init__(self):
+        self.__field_list = []
+    def addField(self, field):
+        self.__field_list.append(field)
+    def mergeList(self, field_list):
+        self.__field_list = map(add, self.__field_list, field_list)
+
+class mod_cls:
+    def __init__(self, vis, app):
+        self.__Vis = vis
+        self.__App = app
+    def getVis(self):return self.__Vis
+    def getApp(self):return self.__App
+
+class FieldRecord:
+    """Record for decaf fields"""
+    def __init__(self, mod, var):
+        self.__fieldName = var.getVarId()
+        self.__fieldId = FieldTable.assignId()
+        self.__containingCls = ""
+        self.__fieldVis = mod.getVis() # public or private, default is private
+        self.__fieldApp = mod.getApp() # static or instance
+        self.__fieldType = var.getType()
+
+    def setContainingCls(self, clsName):
+        self.__containingCls = clsName
+
+#need to add a flag to indicate this is a field_rec_list, a method or a ctor
+class cls_body_decl:
+    def __init__(self):
+        self.__field_list = []
+        self.__method = None
+        self.__ctor = None
+        self.__flag = ""
+    def addFieldList(self, field_rec_list):
+        self.__field_list = map(add, self.__field_list, field_rec_list)
+        self.__flag = "field_list"
+    def addMethod(self, meth_rec):
+        self.__method = meth_rec
+        self.__flag = "method"
+    def addCtor(self, ctor_rec):
+        self.__ctor = ctor_rec
+        self.flag = "ctor"
+
+    def getFieldList(self):return self.__field_list
+    def getMethod(self):return self.__method
+    def getCtor(self):return self.__ctor
+    def getFlag(self):return self.__flag
+
+#contain 3 lists:
+#   ctor list
+#   method list
+#   field list
+## NOTE: each list contains directly field_list, method_record and ctor_record  defined above
+class cls_body_decl_list:
+    def __init__(self):
+        self.__field_list = []
+        self.__method_list = []
+        self.__ctor_list = []
+    def addBodyDecl(self, body_decl):
+        if body_decl.getFlag() == "field_list":
+            self.addFieldList(body_decl)
+        elif body_decl.getFlag() == "method":
+            self.addMethod(body_decl)
+        elif body_decl.getFlag() == "ctor":
+            self.addCtor(body_decl)
+    def addFieldList(self, body_decl):
+        self.__field_list = map(add, self.__field_list, body_decl.getFieldList())
+    def addMethod(self, body_decl):
+        self.__method_list.append(body_decl.getMethod())
+    def addCtor(self, body_decl):
+        self.__ctor_list.append(body_decl.getCtor())
+    def setContainingCls(self, clsName):
+        for field in self.__field_list:
+            field.setContainingCls(clsName)
+        for method in self.__method_list:
+            method.setContainingCls(clsName)
+        for ctor in self.__ctor_list:
+            ctor.setContainingCls(clsName)
+    def getFieldList(self):return self.__field_list
+    def getMethodList(self):return self.__method_list
+    def getCtorList(self):return self.__ctor_list#TODO: probably not allow more than one ctor
