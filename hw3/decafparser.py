@@ -214,12 +214,13 @@ def p_block_error(p):
     # TODO: AST for error block
     p[0] = p[2]
 
+#stmt_list type: BlockStmt
 def p_stmt_list_empty(p):
     'stmt_list : '
     p[0] = ast.BlockStmt(p.linespan(0))
 def p_stmt_list(p):
     'stmt_list : stmt_list stmt'
-    p[1].append(p[2])
+    p[1].addStmt(p[2])
     p[1].setLinenoRange(p.linespan(0))
     p[0] = p[1]
 
@@ -255,7 +256,6 @@ def p_stmt_var_decl(p):
     'stmt : var_decl'
     # TODO: VarDeclStmt is a stub
     p[0] = ast.VarDeclStmt(p.linespan(0))
-    pass
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
     print("Invalid statement near line {}".format(p.lineno(1)))

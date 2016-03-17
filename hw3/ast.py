@@ -253,10 +253,12 @@ class cls_body_decl_list:
 
 class Stmt:
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
-        self.linenoRange = linenoRange
-    
+        self.__linenoRange = linenoRange
+
     def setLinenoRange(self, range):
-        self.linenoRange = range
+        self.__linenoRange = range
+    def getLinenoRange(self):
+        return self.__linenoRange
 
 class IfStmt(Stmt):
     def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
@@ -266,7 +268,7 @@ class IfStmt(Stmt):
         Stmt.__init__(self, linenoRange)
 
 class WhileStmt(Stmt):
-    def __init__(self, linenoRange, conExpr, bodyStmt):
+    def __init__(self, linenoRange, condExpr, bodyStmt):
         self.__condExpr = condExpr # Expr
         self.__bodyStmt = bodyStmt # Stmt
         Stmt.__init__(self, linenoRange)
@@ -289,7 +291,7 @@ class BlockStmt(Stmt):
         self.__StmtList = [] # Stmt object list
         Stmt.__init__(self, linenoRange)
 
-    def append(self, item):
+    def addStmt(self, item):
         self.__StmtList.append(item)
 
 class ContStmt(Stmt):
@@ -319,6 +321,10 @@ class VarDeclStmt(Stmt):
 class Expr:
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
+    def setLinenoRange(self, linenoRange):
+        self.__linenoRange = linenoRange
+    def getLinenoRange(self):
+        return self.__linenoRange
 
 class ConstExpr(Expr):
     def __init__(self, linenoRange, type, val):
@@ -328,7 +334,7 @@ class ConstExpr(Expr):
 
 class VarExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 class UnaryExpr(Expr):
@@ -361,17 +367,17 @@ class AutoExpr(Expr):
 
 class FieldAccExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 class MethodInvExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 class ThisExpr(Expr):
@@ -384,17 +390,17 @@ class SuperExpr(Expr):
 
 class ClsRefExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 class ArryAccExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 class NewArryExpr(Expr):
     def __init__(self, linenoRange):
-        
+
         Expr.__init__(self, linenoRange)
 
 
