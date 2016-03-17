@@ -9,7 +9,6 @@ import ast
 
 import sys
 import logging
-from operator import add
 
 precedence = (
     ('right', 'ASSIGN'),
@@ -45,10 +44,9 @@ def p_class_decl_list_empty(p):
 def p_class_decl(p):
     'class_decl : CLASS ID extends LBRACE class_body_decl_list RBRACE'
     # class_body_decl_list: [CtorRecord list, MethodRecord list, FieldRecord list]
-    ast.ClassRecord(p[2], p[3], p[5][0], p[5][1], p[5][2])
-    for i in range(1, 3):
-        for record in p[5][i]: # record: each MethodRecord/FieldRecord
-            record.setContainingCls(p[2]) # set ContainingCls field
+    # classRecord: (clsName, superClsName, ctors, methods, fields)
+    ast.ClassRecord(p[2], p[3], p[5].getCtorList(), p[5].getMethodList(), p[5].getFieldList())
+    p[5].setContainingCls(p[2])
 
 def p_class_decl_error(p):
     'class_decl : CLASS ID extends LBRACE error RBRACE'
@@ -61,35 +59,47 @@ def p_extends_id(p):
     p[0] = p[2] # p[2]: str of ID.lexeme
 def p_extends_empty(p):
     ' extends : '
-    p[0] = None # TODO: empty string or None?
+    p[0] = ""
 
 def p_class_body_decl_list_plus(p):
     'class_body_decl_list : class_body_decl_list class_body_decl'
-    p[0] = map(add, p[1], p[2])
+    p[1].addBodyDecl(p[2])
+    p[0] = p[1]
 def p_class_body_decl_list_single(p):
     'class_body_decl_list : class_body_decl'
-    p[0] = p[1]
+    p[0] = ast.cls_body_decl_list()
+    p[0].addBodyDecl(p[1])
+
 
 # class_body_decl: [CtorRecord, MethodRecord, FieldRecord partial list(because we can declare more than one Fields at one time)]
 def p_class_body_decl_field(p):
     'class_body_decl : field_decl'
-    p[0] = [[], [], p[1]]
+    p[0] = ast.cls_body_decl()
+    p[0].addFieldList(p[1])
 def p_class_body_decl_method(p):
     'class_body_decl : method_decl'
-    p[0] = [[], [p[1]], []]
+    p[0] = ast.cls_body_decl()
+    p[0].addMethod(p[1])
 def p_class_body_decl_constructor(p):
     'class_body_decl : constructor_decl'
-    p[0] = [[p[1]], [], []]
+    p[0] = ast.cls_body_decl()
+    p[0].addCtor(p[1])
 
-
-# Field/Method/Constructor Declarations
+#var_decl    type: var_cls_list
+#field_decl  type: field_rec_list
+#field_rec_list contains fieldrecord elem
+#fieldrecord elem is init from var_cls
+#fieldrecord: (fieldName, containingCls, fieldVis, fieldApp, fieldType)
+#var_cls: (varId, arrayDim, varType, lineno)
+#mod_cls: (Vis, App)
 def p_field_decl(p):
     'field_decl : mod var_decl'
-    p[0] = []
+    new_field_list = ast.field_cls_list()
     for var in p[2]:
-        # var_decl: [var1, var2, ...]
-        # var: [fieldName, typeRecord(a list)]
-        p[0].append(ast.FieldRecord(var[0], None, p[1][0], p[1][1], var[1]))
+        tmp_field_rec = ast.FieldRecord(p[1] ,var)
+        new_field_list.addField(tmp_field_rec)
+        ast.FieldTable.addFieldToGlobFieldTab(tmp_field_rec)
+    p[0] = new_field_list
 
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
@@ -106,10 +116,9 @@ def p_constructor_decl(p):
     p[0] = ast.CtorRecord(p[1][0], p[4].getAllFormals(), p[4].mergeRecordList(p[6][0]), p[6][1]) # TODO: verify last two
 
 
-
 def p_mod(p):
     'mod : visibility_mod storage_mod'
-    p[0] = [p[1],p[2]]
+    p[0] = ast.mod_cls(p[1], p[2])
 
 def p_visibility_mod_pub(p):
     'visibility_mod : PUBLIC'
@@ -128,11 +137,10 @@ def p_storage_mod_empty(p):
     'storage_mod : '
     p[0] = "instance"
 
+#var_decl is still of type: var_cls_list
 def p_var_decl(p):
     'var_decl : type var_list SEMICOLON'
-    for var in p[2]:
-        var[1].append(p[1])
-        # var[1]: type(list) of var, e.g. [array, array, int]
+    p[2].setType(p[1])
     p[0] = p[2]
 
 def p_type_int(p):
@@ -148,21 +156,26 @@ def p_type_id(p):
     'type :  ID'
     p[0] = p[1]
 
+#For var_decl->field_decl->class_body_decl->class_body_decl_list
+#            ->stmt
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
-    p[1].append(p[3])
+    p[1].addVar(p[3])
     p[0] = p[1]
 def p_var_list_single(p):
     'var_list : var'
-    p[0] = [p[1]]
+    new_var_list = ast.var_cls_list()
+    new_var_list.addVar(p[1])
+    p[0] = new_var_list
 
 def p_var_id(p):
     'var : ID'
-    # var: [fieldName, typeRecord(a list)]
-    p[0] = [p[1], ast.TypeRecord()]
+    # var_cls: varId, arrayDim, varType, lineno(TODO)
+    p[0] = ast.var_cls(p[1], None, None, None)
+
 def p_var_array(p):
     'var : var LBRACKET RBRACKET'
-    p[1][1].append("array")
+    p[1].AddArrayDim()
     p[0] = p[1]
 
 def p_param_list_opt(p):
@@ -239,9 +252,13 @@ def p_stmt_block(p):
     'stmt : block'
     p[0] = p[1] # p[1]: BlockStmt
 def p_stmt_var_decl(p):
+<<<<<<< HEAD
     'stmt : var_decl'
     # TODO: VarDeclStmt is a stub
     p[0] = ast.VarDeclStmt(p.linespan(0))
+=======
+    pass
+>>>>>>> f2e455b24e1d1c43e027cf3c5daf56b1510cb948
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
     print("Invalid statement near line {}".format(p.lineno(1)))
