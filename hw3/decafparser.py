@@ -21,15 +21,13 @@ precedence = (
     ('left', 'MULTIPLY', 'DIVIDE'),
     ('right', 'NOT'),
     ('right', 'UMINUS'),
+    ('right', 'RPAREN'), # TODO: need to verify
     ('right', 'ELSE'),
-    ('right', 'RPAREN'),
 )
 
 
 def init():
     decaflexer.errorflag = False
-
-start = 'class_body_decl'
 
 ### DECAF Grammar
 
@@ -172,7 +170,7 @@ def p_param_list_opt(p):
     p[0] = p[1]
 def p_param_list_empty(p):
     'param_list_opt : '
-    p[0] = None # TODO: pass an empty VariableTable or None?
+    p[0] = ast.VariableTable() # TODO: pass an empty VariableTable instead of None
 
 def p_param_list(p):
     'param_list : param_list COMMA param'
@@ -195,53 +193,60 @@ def p_param(p):
 
 def p_block(p):
     'block : LBRACE stmt_list RBRACE'
-    # TODO: stub
-    p[0] = [[],0]
+    # TODO: scope info
+    p[0] = p[2]
 def p_block_error(p):
     'block : LBRACE stmt_list error RBRACE'
     # error within a block; skip to enclosing block
-    pass
+    # TODO: AST for error block
+    p[0] = p[2]
 
 def p_stmt_list_empty(p):
     'stmt_list : '
-    pass
+    p[0] = ast.BlockStmt(p.linespan(0))
 def p_stmt_list(p):
     'stmt_list : stmt_list stmt'
-    pass
+    p[1].append(p[2])
+    p[1].setLinenoRange(p.linespan(0))
+    p[0] = p[1]
 
 
-def p_stmt_if(p):
-    '''stmt : IF LPAREN expr RPAREN stmt ELSE stmt
-          | IF LPAREN expr RPAREN stmt'''
-    pass
+def p_stmt_if_only(p):
+    'stmt : IF LPAREN expr RPAREN stmt'
+    p[0] = ast.IfStmt(p.linespan(0), p[3], p[5])
+def p_stmt_if_else(p):
+    'stmt : IF LPAREN expr RPAREN stmt ELSE stmt'
+    p[0] = ast.IfStmt(p.linespan(0), p[3], p[5], p[7])
 def p_stmt_while(p):
     'stmt : WHILE LPAREN expr RPAREN stmt'
-    pass
+    p[0] = ast.WhileStmt(p.linespan(0), p[3], p[5])
 def p_stmt_for(p):
     'stmt : FOR LPAREN stmt_expr_opt SEMICOLON expr_opt SEMICOLON stmt_expr_opt RPAREN stmt'
-    pass
+    p[0] = ast.ForStmt(p.linespan(0), p[3], p[5], p[7], p[9])
 def p_stmt_return(p):
     'stmt : RETURN expr_opt SEMICOLON'
-    pass
+    p[0] = ast.RetStmt(p.linespan(0), p[2])
 def p_stmt_stmt_expr(p):
     'stmt : stmt_expr SEMICOLON'
-    pass
+    p[0] = ast.StmtExprStmt(p.linespan(0) p[1])
 def p_stmt_break(p):
     'stmt : BREAK SEMICOLON'
-    pass
+    p[0] = ast.BrkStmt(p.linespan(0))
 def p_stmt_continue(p):
     'stmt : CONTINUE SEMICOLON'
-    pass
+    p[0] = ast.ContStmt(p.linespan(0))
 def p_stmt_block(p):
     'stmt : block'
-    pass
+    p[0] = p[1] # p[1]: BlockStmt
 def p_stmt_var_decl(p):
     'stmt : var_decl'
-    pass
+    # TODO: VarDeclStmt is a stub
+    p[0] = ast.VarDeclStmt(p.linespan(0))
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
     print("Invalid statement near line {}".format(p.lineno(1)))
     decaflexer.errorflag = True
+    p[0] = ast.SkipStmt(p.linespan(0))
 
 # Expressions
 def p_literal_int_const(p):
@@ -415,7 +420,7 @@ def from_file(filename):
     try:
         with open(filename, "rU") as f:
             init()
-            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=None)
+            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=None)
         return not decaflexer.errorflag
     except IOError as e:
         print "I/O error: %s: %s" % (filename, e.strerror)
@@ -427,7 +432,7 @@ if __name__ == "__main__" :
             level=logging.CRITICAL,
     )
     log = logging.getLogger()
-    res = parser.parse(f.read(), lexer=lex.lex(module=decaflexer), debug=1)
+    res = parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=1)
 
     if parser.errorok :
         print("Parse succeed")

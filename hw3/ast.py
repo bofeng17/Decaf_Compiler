@@ -136,8 +136,11 @@ class FieldTable:
 
 
 class Stmt:
-    def __init__(self, linenoRange): # linenoRange: [startlineno, endlineno]
+    def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.linenoRange = linenoRange
+    
+    def setLinenoRange(self, range):
+        self.linenoRange = range
 
 class IfStmt(Stmt):
     def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
@@ -187,13 +190,100 @@ class SkipStmt(Stmt):
 
 class StmtExprStmt(Stmt):
     def __init__(self, linenoRange, StmtExpr):
-        self.__StmtExpr = StmtExpr # TODO: May need one more layer of abstration. AssnExpr/AutoExpr/MethodInvExpr
+        # TODO: May need one more layer of abstration-StmtExpr Class.
+        self.__StmtExpr = StmtExpr # AssnExpr/AutoExpr/MethodInvExpr
         Stmt.__init__(self, linenoRange)
 
 # TODO:
 class VarDeclStmt(Stmt):
     def __init__(self, linenoRange):
         Stmt.__init__(self, linenoRange)
+
+# TODO: all things below
+class Expr:
+    def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
+        self.__linenoRange = linenoRange
+
+class ConstExpr(Expr):
+    def __init__(self, linenoRange, type, val):
+        self.__type = type # str: 'Integer-constant'
+        self.__val = val # str:
+        Expr.__init__(linenoRange)
+
+class VarExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class UnaryExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class BinaryExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class AssnExpr(Expr):
+    def __init__(self, linenoRange, lhs, rhs):
+        # TODO: May need one more layer of abstration.
+        self.__lhs = lhs # FieldAccExpr/ArryAccExpr
+        self.__rhs = rhs # Expr
+        Expr.__init__(linenoRange)
+
+class AutoExpr(Expr):
+    def __init__(self, linenoRange, lhs, operator, loc):
+        # TODO: May need one more layer of abstration.
+        self.__lhs = lhs # FieldAccExpr/ArryAccExpr
+        self.__operator = operator # str: 'inc' or 'dec'
+        self.__loc = loc # str: 'post' or 'pre'
+        Expr.__init__(linenoRange)
+
+class FieldAccExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class MethodInvExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class NewObjExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class ThisExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class SuperExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class ClsRefExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class ArryAccExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+class NewArryExpr(Expr):
+    def __init__(self, linenoRange):
+        
+        Expr.__init__(linenoRange)
+
+
+
+
+
 
 
 
