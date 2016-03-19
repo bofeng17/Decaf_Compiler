@@ -36,7 +36,7 @@ class CtorRecord:
 
     def Print(self):
         print 'CONSTRUCTOR: ' + str(self.__ctorId) + ',' + self.__Vis
-        print 'Constructor parameters:',  
+        print 'Constructor parameters:',
         for id in self.__ctorParams:
             print str(id) + ', ',
         print 'Variable Table: '
@@ -62,7 +62,7 @@ class MethodRecord:
 
     def Print(self):
         print 'METHOD: '+str(self.__methId)+', '+self.__methName+', '+self.__containingCls+', '+self.__methVis+', '+self.__methApp+', '+self.__retType
-        print 'Method parameters:',  
+        print 'Method parameters:',
         for id in self.__methParams:
             print str(id) + ', ',
         print 'Variable Table: '
@@ -234,7 +234,7 @@ class TypeRecord:
     def Print(self):
         for dim in self.__arrayDim:
             print dim + '(',
-        print self.__baseType, 
+        print self.__baseType,
         print ')'*len(self.__arrayDim),
 
 class var_cls:
@@ -244,7 +244,7 @@ class var_cls:
         self.__varBaseType = varType#This is the base type
         self.__Loc_or_formal = None
     def addArrayDim(self): self.__arrayDim.append('array')
-    def setType(self, varType): 
+    def setType(self, varType):
         self.__varBaseType = varType
     def getType(self):
         assert self.__varBaseType != None#for debug
@@ -301,10 +301,10 @@ class FieldRecord:
 
     def Print(self):
         # All in same line
-        print 'FIELD:', 
+        print 'FIELD:',
         print self.__fieldId, ',', self.__fieldName, ',',
         print self.__containingCls, ',', self.__fieldVis, ',',
-        print self.__fieldApp, ',', 
+        print self.__fieldApp, ',',
         self.__fieldType.Print()
         print ''
 
@@ -394,9 +394,9 @@ class IfStmt(Stmt):
         print 'If(',
         self.__condExpr.Print()
         print ', ' # with '\n'
-        self.__thenStmt.Print() 
+        self.__thenStmt.Print()
         print ', ' # with '\n'
-        self.__elseStmt.Print() 
+        self.__elseStmt.Print()
         print ')'
 
 class WhileStmt(Stmt):
@@ -597,10 +597,17 @@ class MethodInvExpr(Expr):
         print ",",
 
         print self.__methNameStr+",",
-
-        print ",".join([arg.Print() for arg in self.__args]),
-
+        printCommaSepaExprs(self.__args.getArgsList())
         print ")",
+
+def printCommaSepaExprs(expr_list):
+    start = 0
+    end = len(expr_list)
+    for expr in expr_list:
+        expr.Print()
+        if start < end:
+            print ",",
+        start+=1
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange, baseClsName, args):
@@ -609,8 +616,8 @@ class NewObjExpr(Expr):
         super(NewObjExpr, self).__init__(linenoRange)
     def Print(self):
         print "New-object(",
-        print self.__baseClsName+", ",
-        print ",".join([arg.Print() for arg in self.__args]),
+        print self.__baseClsName+",",
+        printCommaSepaExprs(self.__args.getArgsList())
         print ")",
 
 class ThisExpr(Expr):
@@ -663,9 +670,7 @@ class NewArryExpr(Expr):
             if each == 'array':
                 print ')',
         print ", ",
-
-        print ','.join([eachexpr.Print() for eachexpr in self.__dimexpr]),
-
+        printCommaSepaExprs(self.__dimexpr)
         print ')',
 
 class EmptyExpr(Expr):
