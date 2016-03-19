@@ -300,7 +300,7 @@ def p_stmt_var_decl(p):
         global curVarTable, curScope
         varrec = ast.VariableRecord(var, 'Local', curScope)
         curVarTable.addVarRecord(varrec) # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
-    p[0] = ast.VarDeclStmt(p.linespan(0), curVarTable)
+    p[0] = ast.VarDeclStmt(p.linespan(0))
 
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
@@ -499,7 +499,7 @@ def p_stmt_expr_opt(p):
     p[0] = p[1]
 def p_stmt_expr_empty(p):
     'stmt_expr_opt : '
-    p[0] = ast.SkipStmt(p.linespan(0))
+    p[0] = ast.EmptyExpr(p.linespan(0))
 
 def p_expr_opt(p):
     'expr_opt : expr'

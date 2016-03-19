@@ -1,4 +1,4 @@
-from operator import add
+
 class ClassRecord:
     """Record for decaf classes"""
     def __init__(self, clsName, superClsName, ctors, methods, fields):
@@ -17,7 +17,7 @@ class CtorRecord:
         self.__ctorId = CtorTable.assignId()
         self.__ctorParams = ctorParams # list of formal IDs in varTab
         self.__varTab = varTab#VariableTable after flatten, but with scope info
-        self.__ctorBody = ctorBody#TODO: for now it's blockstmt, flatten it if neccessary
+        self.__ctorBody = ctorBody
         self.__Vis = ctorVis
 
 
@@ -33,7 +33,7 @@ class MethodRecord:
         self.__methApp = methApp
         self.__retType = retType # TODO: currently str, instead of type record
         self.__varTab = varTab #VariableTable after flatten, but with scope info
-        self.__methBody = methBody#TODO: for now it's blockstmt, flatten it if neccessary
+        self.__methBody = methBody
 
 
 
@@ -126,8 +126,6 @@ class VariableRecord:
     def setVarId(self, varId):
         self.__varId = varId;
 
-    def setScope(self, scope):
-        self.__scope = scope
     def getScope(self):
         return self.__scope
 
@@ -218,7 +216,7 @@ class field_cls_list:
     def addField(self, field):
         self.__field_list.append(field)
     def mergeList(self, field_list):
-        self.__field_list = map(add, self.__field_list, field_list)
+        self.__field_list = self.__field_list + field_list.getFieldList() # TODO: correctness
     def getFieldList(self):
         return self.__field_list
 
@@ -296,10 +294,7 @@ class cls_body_decl_list:
 class Stmt(object):
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
-        self.__scope = None
 
-    def setScope(self, scope):
-        self.__Scope = scope
     def getScope(self, scope):return self.__scope
 
     def setLinenoRange(self, range):self.__linenoRange = range
@@ -309,37 +304,16 @@ class Stmt(object):
 class BlockStmt(Stmt):
     def __init__(self, linenoRange):
         self.__StmtList = [] # Stmt object list
-        self.__scope = None
-        self.__VariableTable = None
         super(BlockStmt, self).__init__(linenoRange)
-
-    def setVariableTable(self, varTab):
-        self.__VariableTable = varTab
-        self.__VariableTable.setScope(self.__scope)
-
-    def getVariableTable(self):
-        return self.__VariableTable
 
     def addStmt(self, item):
         self.__StmtList.append(item)
 
-#flatten the nested variable tables in all stmts
-#this should be called only  after scope is determined for all variablerecords
-    def getAllLocVarStmtTables(self, newvartab):
+    def Print(self):
+        print 'Block([',
         for stmt in self.__StmtList:
-            if stmt.getStmtType == "VarDeclStmt":
-                newvartab.mergeVariableTable(stmt.getVariableTable())
-            if stmt.__class__.__name__ == "BlockStmt":
-                stmt.getAllLocVarStmtTables(newvartab)
-        return newvartab
-
-#each stmt will have a set_scope function
-    def setAllStmtScope(self, scope):
-        self.__scope = scope #set itself the input scope
-        for stmt in self.__StmtList:
-            stmt.setScope(scope)
-            if stmt.__class__.__name__ == 'BlockStmt':
-                stmt.setAllStmtScope(scope+1)
+            stmt.Print()
+        print '])'
 
 class IfStmt(Stmt):
     def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
@@ -348,11 +322,24 @@ class IfStmt(Stmt):
         self.__elseStmt = elseStmt # Stmt, may be SkipStmt
         super(IfStmt, self).__init__(linenoRange)
 
+    def Print(self):
+        print 'If(',
+        self.__condExpr.Print()
+        self.__thenStmt.Print() # TODO: should bodyStmt be printed in same line?
+        self.__elseStmt.Print() # TODO: should bodyStmt be printed in same line?
+        print ')'
+
 class WhileStmt(Stmt):
     def __init__(self, linenoRange, condExpr, bodyStmt):
         self.__condExpr = condExpr # Expr
         self.__bodyStmt = bodyStmt # Stmt
         super(WhileStmt, self).__init__(linenoRange)
+
+    def Print(self):
+        print 'While(',
+        self.__condExpr.Print()
+        self.__bodyStmt.Print() # TODO: should bodyStmt be printed in same line?
+        print ')'
 
 class ForStmt(Stmt):
     def __init__(self, linenoRange, initExpr, lpCondExpr, updExpr, bodyStmt):
@@ -362,39 +349,61 @@ class ForStmt(Stmt):
         self.__bodyStmt = bodyStmt # Stmt
         super(ForStmt, self).__init__(linenoRange)
 
+    def Print(self):
+        print 'For(',
+        self.__initExpr.Print()
+        self.__lpCondExpr.Print()
+        self.__updExpr.Print()
+        self.__bodyStmt.Print() # TODO: should bodyStmt be printed in same line?
+        print ')'
+
 class RetStmt(Stmt):
-    def __init__(self, linenoRange, retValExpr = None):
+    def __init__(self, linenoRange, retValExpr):
         self.__retValExpr = retValExpr # Expr, may be EmptyExpr
         super(RetStmt, self).__init__(linenoRange)
+
+    def Print(self):
+        print 'Return(',
+        self.__retValExpr.Print()
+        print ')'
 
 class ContStmt(Stmt):
     def __init__(self, linenoRange):
         super(ContStmt, self).__init__(linenoRange)
 
+    def Print(self):
+        print 'Continue()'
+
 class BrkStmt(Stmt):
     def __init__(self, linenoRange):
         super(BrkStmt, self).__init__(linenoRange)
+
+    def Print(self):
+        print 'Break()'
 
 class SkipStmt(Stmt):
     def __init__(self, linenoRange): # don't care linenoRange
         super(SkipStmt, self).__init__(linenoRange)
 
+    def Print(self):
+        print 'Skip()'
+
 class StmtExprStmt(Stmt):
     def __init__(self, linenoRange, StmtExpr):
-        # TODO: May need one more layer of abstration-StmtExpr Class.
         self.__StmtExpr = StmtExpr # AssnExpr/AutoExpr/MethodInvExpr
         super(StmtExprStmt, self).__init__(linenoRange)
 
-class VarDeclStmt(Stmt):
-    def __init__(self, linenoRange, variabletable):
+    def Print(self):
+        print 'Expr(',
+        self.__StmtExpr.Print()
+        print ')'
+
+class VarDeclStmt(Stmt): # TODO: do we really need this kind of statement?
+    def __init__(self, linenoRange):
         super(VarDeclStmt, self).__init__(linenoRange)
-        self.__VariableTable = variabletable
 
-    def getVariableTable(self): return self.__VariableTable
-
-    def setScope(self, scope):
-        for var in self.__VariableTable:
-            var.setScope(scope)
+    def Print(self):
+        pass # print nothing
 
 
 
