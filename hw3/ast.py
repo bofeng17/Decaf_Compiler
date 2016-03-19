@@ -35,9 +35,6 @@ class MethodRecord:
         self.__varTab = varTab #VariableTable after flatten, but with scope info
         self.__methBody = methBody#TODO: for now it's blockstmt, flatten it if neccessary
 
-    def setContainingCls(self, clsName):
-        self.__containingCls = clsName
-
 
 
 
@@ -242,9 +239,6 @@ class FieldRecord:
         self.__fieldApp = mod.getApp() # static or instance
         self.__fieldType = var.getType()# __fieldtype will get a TypeRecord
 
-    def setContainingCls(self, clsName):
-        self.__containingCls = clsName
-
     def getFieldId(self): return self.__fieldId
     def getContainingCls(self): return self.__containingCls
 
@@ -293,13 +287,6 @@ class cls_body_decl_list:
         self.__method_list.append(body_decl.getMethod())
     def addCtor(self, body_decl):
         self.__ctor_list.append(body_decl.getCtor())
-#    def setContainingCls(self, clsName):
-#        for field in self.__field_list:
-#            field.setContainingCls(clsName)
-#        for method in self.__method_list:
-#            method.setContainingCls(clsName)
-#        for ctor in self.__ctor_list:
-#            ctor.setContainingCls(clsName)
     def getFieldList(self):return self.__field_list
     def getMethodList(self):return self.__method_list
     def getCtorList(self):return self.__ctor_list#TODO: probably not allow more than one ctor
@@ -503,7 +490,7 @@ class ArryAccExpr(Expr):
 class NewArryExpr(Expr):
     def __init__(self, linenoRange, base, dimexpr):#base is a str,
         self.__base = base#[array, array, ..., baseTYpe]
-        self.__dimexpr = dimexpr
+        self.__dimexpr = dimexpr # [dim1, dim2, ...]
         super(NewArryExpr, self).__init__(linenoRange)
 
 class EmptyExpr(Expr):

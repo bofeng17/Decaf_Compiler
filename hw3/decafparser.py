@@ -482,14 +482,13 @@ def p_dim_expr(p):
 
 def p_dim_star(p):
     'dim_star : LBRACKET RBRACKET dim_star'
-    p[1].append('array')
-    p[0] = p[1]
+    p[3].append('array')
+    p[0] = p[3]
 def p_dim_star_empty(p):
     'dim_star : '
     p[0] = []
 
 
-# TODO:
 def p_stmt_expr(p):
     '''stmt_expr : assign
                  | method_invocation'''
@@ -498,7 +497,6 @@ def p_stmt_expr(p):
 def p_stmt_expr_opt(p):
     'stmt_expr_opt : stmt_expr'
     p[0] = p[1]
-
 def p_stmt_expr_empty(p):
     'stmt_expr_opt : '
     p[0] = ast.SkipStmt(p.linespan(0))
@@ -509,7 +507,6 @@ def p_expr_opt(p):
 def p_expr_empty(p):
     'expr_opt : '
     p[0] = ast.EmptyExpr(p.linespan(0))
-
 #expression over
 
 # handle scope inc/dec
