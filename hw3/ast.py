@@ -49,9 +49,10 @@ class CtorRecord:
 #var rec tables's var Id is assigned in TOP-DOWN manner
 class MethodRecord:
     """Record for decaf methods"""
-    def __init__(self, methName, containingCls, methVis, methApp, retType, varTab, methBody):
+    def __init__(self, methName, methParams, containingCls, methVis, methApp, retType, varTab, methBody):
         self.__methName = methName
         self.__methId = MethodTable.assignId()
+        self.__methParams = methParams
         self.__containingCls = containingCls
         self.__methVis = methVis
         self.__methApp = methApp
@@ -60,15 +61,15 @@ class MethodRecord:
         self.__methBody = methBody
 
     def Print(self):
-        print 'METHOD: ' + str(self.__ctorId) + ',' + self.__methName + ',' + self.__containingCls + ',' + self.__Vis + ',' + self.__methApp + ',' + self.__retType
+        print 'METHOD: '+str(self.__methId)+', '+self.__methName+', '+self.__containingCls+', '+self.__methVis+', '+self.__methApp+', '+self.__retType
         print 'Method parameters:',  
-        for id in self.__ctorParams:
+        for id in self.__methParams:
             print str(id) + ', ',
         print 'Variable Table: '
-        for varRec in self.__varTab:
+        for varRec in self.__varTab.getVarTable():
             varRec.Print()
         print 'Method Body: '
-        self.__ctorBody.Print()
+        self.__methBody.Print()
 
 
 class ClassTable:
@@ -85,7 +86,6 @@ class ClassTable:
     @staticmethod
     def Print():
         print '--------------------------------------------------------------------------------'
-        print ClassTable.ClassRecords
         for classRec in ClassTable.ClassRecords:
             classRec.Print()
 
@@ -161,6 +161,10 @@ class VariableRecord:
 
     def getVarType(self):
         return self.__varType
+
+    def getVarKind(self):
+        return self.__varKind
+
     def getVarId(self):
         return self.__varId
 
@@ -171,7 +175,9 @@ class VariableRecord:
         return self.__scope
 
     def Print(self):
-        print 'VARIABLE' + str(self.__varId) + ', ' + self.__varName + ', ' + self.__varKind + ', ' + self.__varType
+        print 'VARIABLE ' + str(self.__varId) + ', ' + self.__varName + ', ' + self.__varKind + ', ',
+        self.__varType.Print()
+        print ''
 
 
 #There will be two kind of varRec tables during AST construction
@@ -195,7 +201,7 @@ class VariableTable:
         self.__recCnt += 1
         varRecord.setVarId(self.__recCnt)
 
-    def getVarTable(self): return self.__VarTable
+    def getVarTable(self): return self.__varTable
 
     def mergeVariableTable(self, var_table):
         for var_rec in var_table.getVarTable():
@@ -204,7 +210,7 @@ class VariableTable:
     def getAllFormalsOrLocals(self, kind):
         ret = []
         for var in self.__varTable:
-            if var.getLocOrFormal() == kind:
+            if var.getVarKind() == kind:
                  ret.append(var)
         return ret # list of all formal or local var_records
 
@@ -227,9 +233,9 @@ class TypeRecord:
 
     def Print(self):
         for dim in self.__arrayDim:
-            print dim + '('
-        print self.__baseType
-        print ')'*len(self.__arrayDim)
+            print dim + '(',
+        print self.__baseType, 
+        print ')'*len(self.__arrayDim),
 
 class var_cls:
     def __init__(self, varName, arrayDim, varType):
@@ -238,7 +244,8 @@ class var_cls:
         self.__varBaseType = varType#This is the base type
         self.__Loc_or_formal = None
     def addArrayDim(self): self.__arrayDim.append('array')
-    def setType(self, varType): self.__varBaseType = varType
+    def setType(self, varType): 
+        self.__varBaseType = varType
     def getType(self):
         assert self.__varBaseType != None#for debug
         type_record = TypeRecord(self.__varBaseType, self.__arrayDim)
@@ -288,6 +295,7 @@ class FieldRecord:
         self.__fieldApp = mod.getApp() # static or instance
         self.__fieldType = var.getType()# __fieldtype will get a TypeRecord
 
+
     def getFieldId(self): return self.__fieldId
     def getContainingCls(self): return self.__containingCls
 
@@ -296,7 +304,9 @@ class FieldRecord:
         print 'FIELD:', 
         print self.__fieldId, ',', self.__fieldName, ',',
         print self.__containingCls, ',', self.__fieldVis, ',',
-        print self.__fieldApp, ',', self.__fieldType.Print()
+        print self.__fieldApp, ',', 
+        self.__fieldType.Print()
+        print ''
 
 #need to add a flag to indicate this is a field_rec_list, a method or a ctor
 class cls_body_decl:
@@ -571,7 +581,7 @@ class FieldAccExpr(Expr):
         print "Field-access(",
         self.__baseClsExpr.Print()
         print ",",
-        print self.__accessId
+        print self.__accessId,
         print ")",
 
 class MethodInvExpr(Expr):
