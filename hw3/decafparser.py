@@ -400,6 +400,7 @@ def p_field_access_id(p):
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
+    p[0] = ast.ArryAccExpr(p.linespan(0), p[1], p[3])
 
 def p_method_invocation(p):
 #args_opt should be a list of expressions
@@ -448,46 +449,52 @@ def p_assign_pre(p):
 
 def p_new_array(p):
     'new_array : NEW type dim_expr_plus dim_star'
-    pass
+    p[4].append(p[2])#[array, array, ..., array].append(baseTYpe)
+    p[0] = ast.NewArryExpr(p[4], p[3],p.linespan(0))
 
 def p_dim_expr_plus(p):
     'dim_expr_plus : dim_expr_plus dim_expr'
-    pass
+    p[0] = p[1] + p[2]
+
 def p_dim_expr_single(p):
     'dim_expr_plus : dim_expr'
-    p[0] = 1
+    p[0] = p[1]
 
 def p_dim_expr(p):
     'dim_expr : LBRACKET expr RBRACKET'
-    pass
+    p[0] = [p[2]]
+
 
 def p_dim_star(p):
     'dim_star : LBRACKET RBRACKET dim_star'
-    pass
+    p[1].append('array')
+    p[0] = p[1]
 def p_dim_star_empty(p):
     'dim_star : '
-    pass
+    p[0] = []
 
 
 # TODO:
 def p_stmt_expr(p):
     '''stmt_expr : assign
                  | method_invocation'''
-    pass
+    p[0] = ast.StmtExprStmt(p[1])
 
 def p_stmt_expr_opt(p):
     'stmt_expr_opt : stmt_expr'
     p[0] = p[1]
+
 def p_stmt_expr_empty(p):
     'stmt_expr_opt : '
-    p[0] = None
+    p[0] = ast.SkipStmt(p.linespan(0))
 
 def p_expr_opt(p):
     'expr_opt : expr'
     p[0] = p[1]
 def p_expr_empty(p):
     'expr_opt : '
-    p[0] = None
+    p[0] = ast.EmptyExpr(p.linespan(0))
+
 #expression over
 
 # handle scope inc/dec
