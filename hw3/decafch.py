@@ -6,7 +6,7 @@ where <filename> is the name of the file containing the Decaf program.
 import sys
 import getopt
 
-import decafparser
+import decafparser, ast
 
 class Usage(Exception):
     def __init__(self, msg):
@@ -36,6 +36,7 @@ def main(argv=None):
         infile = filename + ".decaf"
         if decafparser.from_file(infile):
             print "No syntax errors found."
+            ast.ClassTable.Print()
         else:
             print "Failure: there were errors."
     except Usage, err:
@@ -45,3 +46,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
+
