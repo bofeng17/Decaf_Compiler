@@ -45,18 +45,21 @@ def p_class_decl_list_empty(p):
     pass
 
 def p_class_decl(p):
-    'class_decl : CLASS ID extends LBRACE class_body_decl_list RBRACE'
+    'class_decl : CLASS curClass extends LBRACE class_body_decl_list RBRACE'
     # class_body_decl_list: [CtorRecord list, MethodRecord list, FieldRecord list]
     # classRecord: (clsName, superClsName, ctors, methods, fields)
-    global curClass
-    curClass = p[2] # global varible, set by class_decl and accessed by field_decl, field_access
     ast.ClassRecord(p[2], p[3], p[5].getCtorList(), p[5].getMethodList(), p[5].getFieldList())
 
 def p_class_decl_error(p):
-    'class_decl : CLASS ID extends LBRACE error RBRACE'
+    'class_decl : CLASS curClass extends LBRACE error RBRACE'
     # error in class declaration; skip to next class decl.
     ast.ClassRecord(p[2], p[3], [], [], []) # empty CtorRecord/MethodRecord/FieldRecord list
 
+def p_cur_class_id(p):
+    'curClass : ID'
+    global curClass
+    curClass = p[1] # global varible, set by class_decl and accessed by field_decl, field_access
+    p[0] = p[1]
 
 def p_extends_id(p):
     'extends : EXTENDS ID '
@@ -392,26 +395,27 @@ def p_field_access_dot(p):
 def p_field_access_id(p):
     'field_access : ID'
     # if field_access
+    global curClass
     if ast.FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
-        p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
+        p[0] = ast.VarExpr(ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1]))
         return
     # if variable_access
     global curVarTable, curScope
     record = curVarTable.findRecordById(p[1], curScope)
     if record:
-        p[0] = record # record: VariableRecord
+        p[0] = ast.VarExpr(record) # record: VariableRecord
         return
     # if class_reference
+    global curClass
     if curClass == p[1]: # if current class
-        global curClass
-        ast.ClsRefExpr(p.linespan(1), curClass)
+        p[0] = ast.VarExpr(ast.ClsRefExpr(p.linespan(1), curClass))
         return
     record = ast.ClassTable.findRecordById(p[1])
     if record: # if previoud class
-        ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
+        p[0] = ast.VarExpr(ast.ClsRefExpr(p.linespan(1), record.getClsName())) # record: ClassRecord
         return
     # default
-    p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
+    p[0] = ast.VarExpr(ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1]))
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'

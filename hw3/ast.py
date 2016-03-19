@@ -2,13 +2,27 @@
 class ClassRecord:
     """Record for decaf classes"""
     def __init__(self, clsName, superClsName, ctors, methods, fields):
-        self.__clsName = clsName
-        self.__superClsName = superClsName
+        self.__clsName = clsName # str
+        self.__superClsName = superClsName # maybe empty str
         self.__ctors = ctors
         self.__methods = methods
         self.__fields = fields
 
     def getClsName(self): return self.__clsName
+
+    def Print(self):
+        print 'Class Name: ', self.__clsName
+        print 'Super Class Name: ', self.__superClsName
+        print 'Fields: '
+        for item in self.__fields:
+            item.Print()
+        print 'Construtors: '
+        for item in self.__ctors:
+            item.Print()
+        print 'Methods: '
+        for item in self.__methods:
+            item.Print()
+        print '--------------------------------------------------------------------------------'
 
 #var rec tables's var Id is assigned in TOP-DOWN manner
 class CtorRecord:
@@ -20,6 +34,16 @@ class CtorRecord:
         self.__ctorBody = ctorBody
         self.__Vis = ctorVis
 
+    def Print(self):
+        print 'CONSTRUCTOR: ' + str(self.__ctorId) + ',' + self.__Vis
+        print 'Constructor parameters:',  
+        for id in self.__ctorParams:
+            print str(id) + ', ',
+        print 'Variable Table: '
+        for varRec in self.__varTab:
+            varRec.Print()
+        print 'Constructor Body: '
+            self.__ctorBody.Print()
 
 
 #var rec tables's var Id is assigned in TOP-DOWN manner
@@ -35,7 +59,16 @@ class MethodRecord:
         self.__varTab = varTab #VariableTable after flatten, but with scope info
         self.__methBody = methBody
 
-
+    def Print(self):
+        print 'METHOD: ' + str(self.__ctorId) + ',' + self.__methName + ',' + self.__containingCls + ',' + self.__Vis + ',' + self.__methApp + ',' + self.__retType
+        print 'Method parameters:',  
+        for id in self.__ctorParams:
+            print str(id) + ', ',
+        print 'Variable Table: '
+        for varRec in self.__varTab:
+            varRec.Print()
+        print 'Method Body: '
+            self.__ctorBody.Print()
 
 
 class ClassTable:
@@ -48,6 +81,12 @@ class ClassTable:
             if rec.getVarId() == Id:
                 return rec
         return None
+
+    def Print():
+        print '--------------------------------------------------------------------------------'
+        for classRec in ClassRecords:
+            classRec.Print()
+
 
 #TODO: we probably dont need a global ctor table
 class CtorTable:
@@ -129,6 +168,10 @@ class VariableRecord:
     def getScope(self):
         return self.__scope
 
+    def Print(self):
+        print 'VARIABLE' + str(self.__varId) + ', ' + self.__varName + ', ' + self.__varKind + ', ' + self.__varType
+
+
 #There will be two kind of varRec tables during AST construction
 #One is formal parameters
 #Two is local variables
@@ -179,6 +222,12 @@ class TypeRecord:
     def __init__(self, basetype, arraydim):
         self.__baseType = basetype
         self.__arrayDim = arraydim #arrayDim is a list of ['array', ...]
+
+    def Print(self):
+        for dim in self.__arrayDim:
+            print dim + '('
+        print self.__baseType
+        print ')'*len(self.__arrayDim)
 
 class var_cls:
     def __init__(self, varName, arrayDim, varType):
@@ -239,6 +288,13 @@ class FieldRecord:
 
     def getFieldId(self): return self.__fieldId
     def getContainingCls(self): return self.__containingCls
+
+    def Print(self):
+        # All in same line
+        print 'FIELD:', 
+        print self.__fieldId, ',', self.__fieldName, ',',
+        print self.__containingCls, ',', self.__fieldVis, ',',
+        print self.__fieldApp, ',', self.__fieldType
 
 #need to add a flag to indicate this is a field_rec_list, a method or a ctor
 class cls_body_decl:
@@ -310,7 +366,7 @@ class BlockStmt(Stmt):
         self.__StmtList.append(item)
 
     def Print(self):
-        print 'Block([',
+        print 'Block([' # with '\n'
         for stmt in self.__StmtList:
             stmt.Print()
         print '])'
@@ -325,8 +381,10 @@ class IfStmt(Stmt):
     def Print(self):
         print 'If(',
         self.__condExpr.Print()
-        self.__thenStmt.Print() # TODO: should bodyStmt be printed in same line?
-        self.__elseStmt.Print() # TODO: should bodyStmt be printed in same line?
+        print ', ' # with '\n'
+        self.__thenStmt.Print() 
+        print ', ' # with '\n'
+        self.__elseStmt.Print() 
         print ')'
 
 class WhileStmt(Stmt):
@@ -338,6 +396,7 @@ class WhileStmt(Stmt):
     def Print(self):
         print 'While(',
         self.__condExpr.Print()
+        print ', ' # with '\n'
         self.__bodyStmt.Print() # TODO: should bodyStmt be printed in same line?
         print ')'
 
@@ -352,8 +411,11 @@ class ForStmt(Stmt):
     def Print(self):
         print 'For(',
         self.__initExpr.Print()
+        print ', ',
         self.__lpCondExpr.Print()
+        print ', ',
         self.__updExpr.Print()
+        print ', ' # with '\n'
         self.__bodyStmt.Print() # TODO: should bodyStmt be printed in same line?
         print ')'
 
