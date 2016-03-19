@@ -48,6 +48,7 @@ def p_class_decl(p):
     'class_decl : CLASS ID extends LBRACE class_body_decl_list RBRACE'
     # class_body_decl_list: [CtorRecord list, MethodRecord list, FieldRecord list]
     # classRecord: (clsName, superClsName, ctors, methods, fields)
+    global curClass
     curClass = p[2] # global varible, set by class_decl and accessed by field_decl, field_access
     ast.ClassRecord(p[2], p[3], p[5].getCtorList(), p[5].getMethodList(), p[5].getFieldList())
 
@@ -98,7 +99,8 @@ def p_class_body_decl_constructor(p):
 def p_field_decl(p):
     'field_decl : mod var_decl'
     new_field_list = ast.field_cls_list()
-    for var in p[2]:
+    for var in p[2].getVarList():
+        global curClass
         tmp_field_rec = ast.FieldRecord(p[1] ,var, curClass)
         new_field_list.addField(tmp_field_rec)
         # ast.FieldTable.addFieldToGlobFieldTab(tmp_field_rec)
@@ -123,12 +125,14 @@ def p_field_decl(p):
 """
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
+    global curVarTable, curClass
     p[0] = ast.MethodRecord(p[3], curClass, p[1].getVis(), p[1].getApp(), "void", curVarTable, p[7])
     # ast.MethodTable
 #vis: public or private
 #app: static or instance
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
+    global curVarTable, curClass
     p[0] = ast.MethodRecord(p[3], curClass, p[1].getVis(), p[1].getApp(), p[2], curVarTable, p[7])
 
 #block is type: blockStmt has a list of various kinds of stmts
@@ -136,6 +140,7 @@ def p_method_decl_nonvoid(p):
 #app: static or instance
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
+    global curVarTable
     p[0] = ast.CtorRecord(p[1].getVis(), p[4].getAllFormalsOrLocals('Formal'), curVarTable, p[6])
 
 
@@ -210,6 +215,7 @@ def p_param_list_opt(p):
 def p_param_list_empty(p):
     'param_list_opt : '
     # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
+    global curVarTable
     curVarTable = ast.VariableTable()
     p[0] = curVarTable
 
@@ -222,8 +228,9 @@ def p_param_list(p):
 def p_param_list_single(p):
     'param_list : param'
     # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
+    global curVarTable
     curVarTable = ast.VariableTable()
-    curVarTable.AddVarRecord(p[1])
+    curVarTable.addVarRecord(p[1])
     p[0] = curVarTable
 
 #var is type: var_cls
@@ -289,7 +296,8 @@ def p_stmt_block(p):
 #we construct VariableTable out of the var_cls_list
 def p_stmt_var_decl(p):
     'stmt : var_decl'
-    for var in p[1]:
+    for var in p[1].getVarList():
+        global curVarTable, curScope
         varrec = ast.VariableRecord(var, 'Local', curScope)
         curVarTable.addVarRecord(varrec) # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
     p[0] = ast.VarDeclStmt(p.linespan(0), curVarTable)
@@ -363,7 +371,7 @@ def p_args_plus(p):
     p[0] = p[1]
 def p_args_single(p):
     'arg_plus : expr'
-    p[0] = ast.args_plus_cls(p.linespan(0))
+    p[0] = ast.args_plus_cls()
     p[0].addArgs(p[1])
 
 def p_lhs(p):
@@ -383,16 +391,27 @@ def p_field_access_dot(p):
 #                               (1) (2) (3) (1 again, assume it will later declared in a field)
 def p_field_access_id(p):
     'field_access : ID'
-    if FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
+    # if field_access
+    if ast.FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
         p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
-    elif (record = curVarTable.findRecordById(p[1], curScope)):
+        return
+    # if variable_access
+    global curVarTable, curScope
+    record = curVarTable.findRecordById(p[1], curScope)
+    if record:
         p[0] = record # record: VariableRecord
-    elif curClass == p[1]: # name of current class
-        ast.ClsRefExpr(p.linespan(1), curClass) # record: ClassRecord
-    elif (record = ClassTable.findRecordById(p[1])): # previoud class
+        return
+    # if class_reference
+    if curClass == p[1]: # if current class
+        global curClass
+        ast.ClsRefExpr(p.linespan(1), curClass)
+        return
+    record = ast.ClassTable.findRecordById(p[1])
+    if record: # if previoud class
         ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
-    else:
-        p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
+        return
+    # default
+    p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
@@ -495,10 +514,12 @@ def p_expr_empty(p):
 
 # handle scope inc/dec
 def p_scope_inc(p):
-    'scope_inc: '
+    'scope_inc : '
+    global curScope
     curScope += 1
 def p_scope_dec(p):
-    'scope_dec: '
+    'scope_dec : '
+    global curScope
     curScope -= 1
 
 

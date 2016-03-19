@@ -44,7 +44,8 @@ class MethodRecord:
 class ClassTable:
     """The table to store all class intances created"""
     ClassRecords = []
-
+    
+    @staticmethod
     def findRecordById(Id): # search id in a scope descendent manner, return the closest match
         for rec in ClassTable.ClassRecords:
             if rec.getVarId() == Id:
@@ -95,9 +96,9 @@ class FieldTable:
         FieldTable.FieldRecords.append(field)
 
     @staticmethod
-    def findFieldById(self, Id, curClass):
+    def findFieldById(Id, curClass):
         for fr in FieldTable.FieldRecords:
-            if fr.getFieldId() == Id and fr.getContainingCls() == curClass
+            if (fr.getFieldId() == Id) and (fr.getContainingCls() == curClass):
                 return True
         return False
 
@@ -170,7 +171,7 @@ class VariableTable:
     def findRecordById(self, Id, curScope): # search id in a scope descendent manner, return the closest match
         i = curScope
         while i >= 0:
-            for rec in __varTable:
+            for rec in self.__varTable:
                 if rec.getVarId() == Id and rec.getScope() == i:
                     return rec
             i -= 1
@@ -211,6 +212,9 @@ class var_cls_list:
     def setLocOrFormal(self, loc_formal):
         for var in self.__var_list:
             var.setLocOrFormal(loc_formal)
+    def getVarList(self):
+        return self.__var_list
+
 class field_cls_list:
     def __init__(self):
         self.__field_list = []
@@ -218,6 +222,8 @@ class field_cls_list:
         self.__field_list.append(field)
     def mergeList(self, field_list):
         self.__field_list = map(add, self.__field_list, field_list)
+    def getFieldList(self):
+        return self.__field_list
 
 class mod_cls:
     def __init__(self, vis, app):
@@ -229,7 +235,7 @@ class mod_cls:
 class FieldRecord:
     """Record for decaf fields"""
     def __init__(self, mod, var, containingCls): #var is of type: var_cls
-        self.__fieldName = var.getVarId()
+        self.__fieldName = var.getVarName()
         self.__fieldId = FieldTable.assignId()
         self.__containingCls = containingCls
         self.__fieldVis = mod.getVis() # public or private, default is private
@@ -250,7 +256,7 @@ class cls_body_decl:
         self.__ctor = None
         self.__flag = ""
     def addFieldList(self, field_rec_list):
-        self.__field_list = map(add, self.__field_list, field_rec_list)
+        self.__field_list = self.__field_list + field_rec_list.getFieldList()
         self.__flag = "field_list"
     def addMethod(self, meth_rec):
         self.__method = meth_rec
@@ -282,7 +288,7 @@ class cls_body_decl_list:
         elif body_decl.getFlag() == "ctor":
             self.addCtor(body_decl)
     def addFieldList(self, body_decl):
-        self.__field_list = map(add, self.__field_list, body_decl.getFieldList())
+        self.__field_list = self.__field_list + body_decl.getFieldList()
     def addMethod(self, body_decl):
         self.__method_list.append(body_decl.getMethod())
     def addCtor(self, body_decl):
@@ -318,7 +324,7 @@ class BlockStmt(Stmt):
         self.__StmtList = [] # Stmt object list
         self.__scope = None
         self.__VariableTable = None
-        super(Stmt, self).__init__(self, linenoRange)
+        super(BlockStmt, self).__init__(linenoRange)
 
     def setVariableTable(self, varTab):
         self.__VariableTable = varTab
@@ -353,13 +359,13 @@ class IfStmt(Stmt):
         self.__condExpr = condExpr # Expr
         self.__thenStmt = thenStmt # Stmt
         self.__elseStmt = elseStmt # Stmt, may be SkipStmt
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(IfStmt, self).__init__(linenoRange)
 
 class WhileStmt(Stmt):
     def __init__(self, linenoRange, condExpr, bodyStmt):
         self.__condExpr = condExpr # Expr
         self.__bodyStmt = bodyStmt # Stmt
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(WhileStmt, self).__init__(linenoRange)
 
 class ForStmt(Stmt):
     def __init__(self, linenoRange, initExpr, lpCondExpr, updExpr, bodyStmt):
@@ -367,34 +373,34 @@ class ForStmt(Stmt):
         self.__lpCondExpr = lpCondExpr # Expr, may be EmptyExpr
         self.__updExpr = updExpr # StmtExpr, may be EmptyExpr
         self.__bodyStmt = bodyStmt # Stmt
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(ForStmt, self).__init__(linenoRange)
 
 class RetStmt(Stmt):
     def __init__(self, linenoRange, retValExpr = None):
         self.__retValExpr = retValExpr # Expr, may be EmptyExpr
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(RetStmt, self).__init__(linenoRange)
 
 class ContStmt(Stmt):
     def __init__(self, linenoRange):
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(ContStmt, self).__init__(linenoRange)
 
 class BrkStmt(Stmt):
     def __init__(self, linenoRange):
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(BrkStmt, self).__init__(linenoRange)
 
 class SkipStmt(Stmt):
     def __init__(self, linenoRange): # don't care linenoRange
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(SkipStmt, self).__init__(linenoRange)
 
 class StmtExprStmt(Stmt):
     def __init__(self, linenoRange, StmtExpr):
         # TODO: May need one more layer of abstration-StmtExpr Class.
         self.__StmtExpr = StmtExpr # AssnExpr/AutoExpr/MethodInvExpr
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(StmtExprStmt, self).__init__(linenoRange)
 
 class VarDeclStmt(Stmt):
     def __init__(self, linenoRange, variabletable):
-        super(Stmt, self).__init__(self,  linenoRange)
+        super(VarDeclStmt, self).__init__(linenoRange)
         self.__VariableTable = variabletable
 
     def getVariableTable(self): return self.__VariableTable
@@ -418,43 +424,43 @@ class ConstExpr(Expr):
     def __init__(self, linenoRange, expr_type, val):
         self.__type = expr_type # str: 'Integer-constant', 'Float-constant', 'String-constant', 'Null', 'True', 'False'
         self.__val = val # int: 'Integer-constant', float: 'Float-constant', str: 'String-constant', None for others
-        super(Expr, self).__init__(self, linenoRange)
+        super(ConstExpr, self).__init__(linenoRange)
 
 class VarExpr(Expr):
     def __init__(self, linenoRange):
-        super(Expr, self).__init__(self, linenoRange)
+        super(VarExpr, self).__init__(linenoRange)
 
 class UnaryExpr(Expr):
     def __init__(self, linenoRange, operand, uniaryOperator):
         self.__init__operand = operand; # Expr
         self.__uniaryOperator = uniaryOperator; # str
-        super(Expr, self).__init__(self, linenoRange)
+        super(UnaryExpr, self).__init__(linenoRange)
 
 class BinaryExpr(Expr):
     def __init__(self, linenoRange, operand1, operator, operand2):
         self.__init__operand1 = operand1; # Expr
         self.__init__operator = operator; # str
         self.__init__operand2 = operand2; # Expr
-        super(Expr, self).__init__(self, linenoRange)
+        super(BinaryExpr, self).__init__(linenoRange)
 
 class AssnExpr(Expr):
     def __init__(self, linenoRange, lhs, rhs):
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__rhs = rhs # Expr
-        super(Expr, self).__init__(self, linenoRange)
+        super(AssnExpr, self).__init__(linenoRange)
 
 class AutoExpr(Expr):
     def __init__(self, linenoRange, lhs, operator, loc):
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__operator = operator # str: 'inc' or 'dec'
         self.__loc = loc # str: 'post' or 'pre'
-        super(Expr, self).__init__(self, linenoRange)
+        super(AutoExpr, self).__init__(linenoRange)
 
 class FieldAccExpr(Expr):
     def __init__(self, linenoRange, baseClsExpr, accessId):
         self.__baseClsExpr = baseClsExpr # maybe ExmptyExpr
         self.__accessId = accessId
-        super(Expr, self).__init__(self, linenoRange)
+        super(FieldAccExpr, self).__init__(linenoRange)
     def getBaseClsExpr(self):return self.__baseClsExpr
     def getAccessId(self):return self.__accessId
 
@@ -463,50 +469,50 @@ class MethodInvExpr(Expr):
         self.__baseClsExpr = baseClsExpr
         self.__methNameStr = methNameStr
         self.__args = args#type: args_plus_cls
-        super(Expr, self).__init__(self, linenoRange)
+        super(MethodInvExpr, self).__init__(linenoRange)
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange, baseClsName, args):
         self.__baseClsName = baseClsName#should be just string
         self.__args = args#type: args_plus_cls
-        super(Expr, self).__init__(self, linenoRange)
+        super(NewObjExpr, self).__init__(linenoRange)
 
 class ThisExpr(Expr):
     def __init__(self, linenoRange):
-        super(Expr, self).__init__(self, linenoRange)
+        super(ThisExpr, self).__init__(linenoRange)
     def getBaseClsName(self):
         return 'This'
 
 class SuperExpr(Expr):
     def __init__(self, linenoRange):
-        super(Expr, self).__init__(self, linenoRange)
+        super(SuperExpr, self).__init__(linenoRange)
     def getBaseClsName(self):
         return 'Super'
 
 class ClsRefExpr(Expr):
     def __init__(self, linenoRange, className):
         self.__className = className
-        super(Expr, self).__init__(self, linenoRange)
+        super(ClsRefExpr, self).__init__(linenoRange)
 
 class ArryAccExpr(Expr):
     def __init__(self, linenoRange, base_expr, index_expr):
         self.__baseExpr = base_expr
         self.__indexExpr = index_expr
-        super(Expr, self).__init__(self, linenoRange)
+        super(ArryAccExpr, self).__init__(linenoRange)
 
 class NewArryExpr(Expr):
     def __init__(self, linenoRange, base, dimexpr):#base is a str,
         self.__base = base#[array, array, ..., baseTYpe]
         self.__dimexpr = dimexpr
-        super(Expr, self).__init__(self, linenoRange)
+        super(NewArryExpr, self).__init__(linenoRange)
 
 class EmptyExpr(Expr):
     def __init__(self, linenoRange):
-        super(Expr, self).__init__(self, linenoRange)
+        super(EmptyExpr, self).__init__(linenoRange)
         pass
 
 class args_plus_cls(): # Expr, Expr , ..., Expr
-    def __init__(self, linenoRange):
+    def __init__(self):
         self.__args_list = []
     def addArgs(self, arg): # arg: Expr
         self.__args_list.append(arg)
