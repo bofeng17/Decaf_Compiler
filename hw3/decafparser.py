@@ -392,6 +392,7 @@ def p_field_access_dot(p):
 def p_field_access_id(p):
     'field_access : ID'
     # if field_access
+    global curClass
     if ast.FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
         p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
         return
@@ -399,20 +400,19 @@ def p_field_access_id(p):
     global curVarTable, curScope
     record = curVarTable.findRecordById(p[1], curScope)
     if record:
-        p[0] = record # record: VariableRecord
+        p[0] = ast.VarExpr(record, p.linespan(0)) # record: VariableRecord
         return
     # if class_reference
+    global curClass
     if curClass == p[1]: # if current class
-        global curClass
-        ast.ClsRefExpr(p.linespan(1), curClass)
+        p[0] = ast.ClsRefExpr(p.linespan(1), curClass)
         return
     record = ast.ClassTable.findRecordById(p[1])
     if record: # if previoud class
-        ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
+        p[0] = ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
         return
     # default
     p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
-
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
     p[0] = ast.ArryAccExpr(p.linespan(0), p[1], p[3])
