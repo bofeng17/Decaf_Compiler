@@ -1,28 +1,121 @@
 from operator import add
-class TypeRecord:
-    """Record for decaf type"""
-    def __init__(self):
-        self.__typeList = [] # e.g. [array, array, int]
+class ClassRecord:
+    """Record for decaf classes"""
+    def __init__(self, clsName, superClsName, ctors, methods, fields):
+        self.__clsName = clsName
+        self.__superClsName = superClsName
+        self.__ctors = ctors
+        self.__methods = methods
+        self.__fields = fields
 
-    def append(self, item):
-        self.__typeList.append(item)
+#var rec tables's var Id is assigned in TOP-DOWN manner
+class CtorRecord:
+    """Record for decaf Constructors"""
+    def __init__(self, ctorVis, ctorParams, varTab, ctorBody):
+        self.__ctorId = CtorTable.assignId()
+        self.__ctorParams = ctorParams # list of formal IDs in varTab
+        self.__varTab = varTab#VariableTable after flatten, but with scope info
+        self.__ctorBody = ctorBody#TODO: for now it's blockstmt, flatten it if neccessary
+        self.__Vis = ctorVis
+#each method has a variable table which has its own set of var IDs
+    def assignIDsForVarTab(self):
+        Id = 0
+        for varRec in self.__varTab:
+            varRec.setId(Id)
+            Id+=1
+
+
+
+#var rec tables's var Id is assigned in TOP-DOWN manner
+class MethodRecord:
+    """Record for decaf methods"""
+    def __init__(self, methName, containingCls, methVis, methApp, retType, varTab, methBody):
+        self.__methName = methName
+        self.__methId = MethodTable.assignId()
+        self.__containingCls = containingCls
+        self.__methVis = methVis
+        self.__methApp = methApp
+        self.__retType = retType
+        self.__varTab = varTab #VariableTable after flatten, but with scope info
+        self.__methBody = methBody#TODO: for now it's blockstmt, flatten it if neccessary
+
+    def setContainingCls(self, clsName):
+        self.__containingCls = clsName
+
+#each method has a variable table which has its own set of var IDs
+    def assignIDsForVarTab(self):
+        Id = 0
+        for varRec in self.__varTab:
+            varRec.setId(Id)
+            Id+=1
 
 
 
 
+class ClassTable:
+    """The table to store all class intances created"""
+    ClassRecords = []
 
+#TODO: we probably dont need a global ctor table
+class CtorTable:
+    """The table to store all Ctor intances created"""
+    CurCtorId = 0
+    CtorRecords = []
+
+    @staticmethod
+    def assignId(): # Id starts from 1
+        ret = CtorTable.CurCtorId
+        CtorTable.CurCtorId += 1
+        return ret
+
+#TODO: we probably dont need a global method table
+class MethodTable:
+    """The table to store all method intances created"""
+    CurMethodId = 0
+    MethodRecords = []
+
+    @staticmethod
+    def assignId(): # Id starts from 1
+        ret = MethodTable.CurMethodId
+        MethodTable.CurMethodId += 1
+        return ret
+    @staticmethod
+    def addMethodToGlobMethodTab(methodrec):
+        MethodTable.MethodRecords.append(methodrec)
+
+#TODO: we probably dont need a global field table
+class FieldTable:
+    """The table to store all method intances created"""
+    CurFieldId = 0
+    FieldRecords = []
+
+    @staticmethod
+    def assignId(): # Id starts from 1
+        ret = FieldTable.CurFieldId
+        FieldTable.CurFieldId += 1
+        return ret
+
+    @staticmethod
+    def addFieldToGlobFieldTab(field):
+        FieldTable.FieldRecords.append(field)
+
+#resemble the initialization of FieldRecord,
+#the contructor takes var_cls as input
 class VariableRecord:
     """Record for decaf variables
        varKind: formal/local
     """
-    def __init__(self, varName, varId, varKind, varType):
-        self.__varName = varName
-        self.__varId = varId
+    #var is type: var_cls
+    def __init__(self, var, varKind):
+        self.__varName = var.getVarName()
+        self.__varId = None
         self.__varKind = varKind # str: formal or local
-        self.__varType = varType
+        self.__varType = var.getType()# var_cls will construct a type_record
+        self.__scope = None
     def SetKind(self, kind):
         self.__varKind = kind
-    def SetType(self, varType):
+
+    def SetVarType(self, varType):
         self.__varType = varType
 
     def getVarType(self):
@@ -33,130 +126,67 @@ class VariableRecord:
     def setVarId(self, varId):
         self.__varId = varId;
 
+    def setScope(self, scope):
+        self.__scope = scope
+    def getScope(self):
+        return self.__scope
 
+#There will be two kind of varRec tables during AST construction
+#One is formal parameters
+#Two is local variables
+#When merge them, merge the local var table into formal var table
+#Variabletable should contain a list of variablerecords defined above
 
-
-class ClassRecord:
-    """Record for decaf classes"""
-    def __init__(self, clsName, superClsName, ctors, methods, fields):
-        self.__clsName = clsName
-        self.__superClsName = superClsName
-        self.__ctors = ctors
-        self.__methods = methods
-        self.__fields = fields
-
-
-class CtorRecord:
-    """Record for decaf Constructors"""
-    def __init__(self, ctorVis, ctorParams, varTab, ctorBody):
-        self.__ctorId = CtorTable.assignId()
-        self.__ctorParams = ctorParams # list of formal IDs in varTab
-        self.__varTab = varTab
-        self.__ctorBody = ctorBody
-        self.__Vis = ctorVis
-
-class MethodRecord:
-    """Record for decaf methods"""
-    def __init__(self, methName, containingCls, methVis, methApp, retType, varTab, methBody):
-        self.__methName = methName
-        self.__methId = MethodTable.assignId()
-        self.__containingCls = containingCls
-        self.__methVis = methVis
-        self.__methApp = methApp
-        self.__retType = retType
-        self.__varTab = varTab
-        self.__methBody = methBody
-
-    def setContainingCls(self, clsName):
-        self.__containingCls = clsName
-
-
-
-
-
-class ClassTable:
-    """The table to store all class intances created"""
-    ClassRecords = []
-
-class CtorTable:
-    """The table to store all Ctor intances created"""
-    CurCtorId = 0
-    CtorRecords = []
-
-    @staticmethod
-    def assignId(): # Id starts from 1
-        CtorTable.CurCtorId += 1
-        return CtorTable.CurCtorId;
-
-class MethodTable:
-    """The table to store all method intances created"""
-    CurMethodId = 0
-    MethodRecords = []
-
-    @staticmethod
-    def assignId(): # Id starts from 1
-        MethodTable.CurMethodId += 1
-        return MethodTable.CurMethodId;
-
-class FieldTable:
-    """The table to store all method intances created"""
-    CurFieldId = 0
-    FieldRecords = []
-
-    @staticmethod
-    def assignId(): # Id starts from 1
-        FieldTable.CurFieldId += 1
-        return FieldTable.CurFieldId;
-    @staticmethod
-    def addFieldToGlobFieldTab(field):
-        FieldTable.FieldRecords.append(field)
-
-
-
-
-
-
+#also each variabletable and its element var_records should have a scope
 class VariableTable:
     """A table of variables for a ctor/method"""
     def __init__(self):
         self.__varTable = []
-        self.__curVarId = 0
 
-    def assignId(self): # Id starts from 1
-        self.__curVarId += 1
-        return self.__curVarId;
-    def AddVar(self, varRecord):
+    def isTableEmpty(self):
+        return len(self.__VarTable) == 0
+
+    def addVarRecord(self, varRecord):
         self.__varTable.append(varRecord)
 
-    def mergeRecordList(self, recList):
-        for rec in recList:
-            rec.setVarId(self.assignId())
-            self.AddVar(rec)
+    def getVarTable(self): return self.__VarTable
 
-    def getAllFormals(self):
-        formals = []
+    def mergeVariableTable(self, var_table):
+        for var_rec in var_table.getVarTable():
+            self.addVarRecord(var_rec)
+
+    def getAllFormalsOrLocals(self, kind):
+        ret = []
         for var in self.__varTable:
-            if var.getVarType() == 'formal':
-                 formals.append(var.getVarId())
-        return formals # list of all formal IDs
+            if var.getLocOrFormal() == kind:
+                 ret.append(var)
+        return ret # list of all formal or local var_records
+    def setScope(self, scope):
+        for varRec in self.__VarTable:
+            varRec.setScope(scope)
 
-
-
+#Note: TypeRecord is the type of VariableRecord's __varType field
+class TypeRecord:
+    """Record for decaf type"""
+    def __init__(self, basetype, arraydim):
+        self.__baseType = basetype
+        self.__arrayDim = arraydim #arrayDim is a list of ['array', ...]
 
 class var_cls:
-    def __init__(self, varId, arrayDim, varType, lineno):
-        self.__varId = varId
+    def __init__(self, varName, arrayDim, varType):
+        self.__varName = varName
         self.__arrayDim = arrayDim
-        self.__lineno = lineno
-        self.__varType = varType
-    def addArrayDim(self):
-        self.__arrayDim.append('array')
-    def setType(self, varType):
-        self.__varType = varType
-    def getVarId(self):
-        return self.__varId
+        self.__varBaseType = varType#This is the base type
+        self.__Loc_or_formal = None
+    def addArrayDim(self): self.__arrayDim.append('array')
+    def setType(self, varType): self.__varBaseType = varType
     def getType(self):
-        return self.__varType
+        assert self.__varBaseType != None#for debug
+        type_record = TypeRecord(self.__varBaseType, self.__arrayDim)
+        return type_record
+    def getVarName(self): return self.__varName
+    def setLocOrFormal(self, loc_formal):
+        self.__Loc_or_formal = loc_formal
 
 class var_cls_list:
     def __init__(self):
@@ -166,6 +196,9 @@ class var_cls_list:
     def setType(self, varType):
         for var in self.__var_list:
             var.setType(varType)
+    def setLocOrFormal(self, loc_formal):
+        for var in self.__var_list:
+            var.setLocOrFormal(loc_formal)
 class field_cls_list:
     def __init__(self):
         self.__field_list = []
@@ -183,13 +216,13 @@ class mod_cls:
 
 class FieldRecord:
     """Record for decaf fields"""
-    def __init__(self, mod, var):
+    def __init__(self, mod, var): #var is of type: var_cls
         self.__fieldName = var.getVarId()
         self.__fieldId = FieldTable.assignId()
         self.__containingCls = ""
         self.__fieldVis = mod.getVis() # public or private, default is private
         self.__fieldApp = mod.getApp() # static or instance
-        self.__fieldType = var.getType()
+        self.__fieldType = var.getType()# __fieldtype will get a TypeRecord
 
     def setContainingCls(self, clsName):
         self.__containingCls = clsName
@@ -251,27 +284,75 @@ class cls_body_decl_list:
     def getCtorList(self):return self.__ctor_list#TODO: probably not allow more than one ctor
 
 
-class Stmt:
-    def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
+"""Below are statements related classes ############################################"""
+class Stmt(object):
+    def __init__(self, stmtType, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
+        self.__scope = None
 
-    def setLinenoRange(self, range):
-        self.__linenoRange = range
-    def getLinenoRange(self):
-        return self.__linenoRange
+    def setLinenoRange(self, range):self.__linenoRange = range
+    def getLinenoRange(self):return self.__linenoRange
+
+#each block stmt should have a scope, and all stmts in this block stmt has the same scope
+class BlockStmt(Stmt):
+    def __init__(self, linenoRange):
+        self.__StmtList = [] # Stmt object list
+        self.__scope = None
+        self.__VariableTable = None
+        super(Stmt, self).__init__(self, linenoRange)
+
+    def setVariableTable(self, varTab):
+        self.__VariableTable = varTab
+        self.__VariableTable.setScope(self.__scope)
+
+    def getVariableTable(self):
+        return self.__VariableTable
+
+
+    def setScope(self, scope):self.__scope = scope
+    def getScope(self, scope):return self.__scope
+
+    def addStmt(self, item):
+        self.__StmtList.append(item)
+
+#flatten the nested variable tables in all stmts
+#this should be called only  after scope is determined for all variablerecords
+    def getAllLocVarStmtTables(self, newvartab):
+        for stmt in self.__StmtList:
+            if stmt.getStmtType == "VarDeclStmt":
+                newvartab.mergeVariableTable(stmt.getVariableTable())
+            if stmt.__class__.__name__ == "BlockStmt":
+                stmt.getAllLocVarStmtTables(newvartab)
+        return newvartab
+
+#each stmt will have a set_scope function
+    def setAllStmtScope(self, scope):
+        self.__scope = scope #set itself the input scope
+        for stmt in self.__StmtList:
+            stmt.setScope(scope)
+            if stmt.__class__.__name__ == 'BlockStmt':
+                stmt.setAllStmtScope(scope+1)
 
 class IfStmt(Stmt):
     def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
         self.__condExpr = condExpr # Expr
         self.__thenStmt = thenStmt # Stmt
         self.__elseStmt = elseStmt # Stmt, may be None
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
 
 class WhileStmt(Stmt):
     def __init__(self, linenoRange, condExpr, bodyStmt):
         self.__condExpr = condExpr # Expr
         self.__bodyStmt = bodyStmt # Stmt
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
 
 class ForStmt(Stmt):
     def __init__(self, linenoRange, initExpr, lpCondExpr, updExpr, bodyStmt):
@@ -279,46 +360,77 @@ class ForStmt(Stmt):
         self.__lpCondExpr = lpCondExpr # Expr, may be None
         self.__updExpr = updExpr # StmtExpr, may be None
         self.__bodyStmt = bodyStmt # Stmt
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
 
 class RetStmt(Stmt):
     def __init__(self, linenoRange, retValExpr = None):
         self.__retValExpr = retValExpr # Expr, may be None
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
 
-class BlockStmt(Stmt):
-    def __init__(self, linenoRange):
-        self.__StmtList = [] # Stmt object list
-        Stmt.__init__(self, linenoRange)
+    def setScope(self, scope):
+        self.__Scope = scope
 
-    def addStmt(self, item):
-        self.__StmtList.append(item)
+
+
 
 class ContStmt(Stmt):
     def __init__(self, linenoRange):
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
 
 class BrkStmt(Stmt):
     def __init__(self, linenoRange):
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
 
 class SkipStmt(Stmt):
     def __init__(self, linenoRange):
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
 
 class StmtExprStmt(Stmt):
     def __init__(self, linenoRange, StmtExpr):
         # TODO: May need one more layer of abstration-StmtExpr Class.
         self.__StmtExpr = StmtExpr # AssnExpr/AutoExpr/MethodInvExpr
-        Stmt.__init__(self, linenoRange)
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__Scope = None
 
-# TODO:
+    def setScope(self, scope):
+        self.__Scope = scope
+
 class VarDeclStmt(Stmt):
-    def __init__(self, linenoRange):
-        Stmt.__init__(self, linenoRange)
+    def __init__(self, variabletable, linenoRange):
+        super(Stmt, self).__init__(self,  linenoRange)
+        self.__VariableTable = variabletable
 
+    def getVariableTable(self): return self.__VariableTable
+
+    def setScope(self, scope):
+        for var in self.__VariableTable:
+            var.setScope(scope)
+
+
+
+
+
+
+"""Below are expression related classes ############################################"""
 # TODO: all things below
-class Expr:
+class Expr(object):
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
     def setLinenoRange(self, linenoRange):
@@ -327,82 +439,96 @@ class Expr:
         return self.__linenoRange
 
 class ConstExpr(Expr):
-    def __init__(self, linenoRange, type, val):
-        self.__type = type # str: 'Integer-constant', 'Float-constant', 'String-constant', 'Null', 'True', 'False'
+    def __init__(self, linenoRange, expr_type, val):
+        self.__type = expr_type # str: 'Integer-constant', 'Float-constant', 'String-constant', 'Null', 'True', 'False'
         self.__val = val # int: 'Integer-constant', float: 'Float-constant', str: 'String-constant', None for others
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class VarExpr(Expr):
     def __init__(self, linenoRange):
-
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class UnaryExpr(Expr):
     def __init__(self, linenoRange, operand, uniaryOperator):
         self.__init__operand = operand; # Expr
         self.__uniaryOperator = uniaryOperator; # str
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class BinaryExpr(Expr):
     def __init__(self, linenoRange, operand1, operator, operand2):
         self.__init__operand1 = operand1; # Expr
         self.__init__operator = operator; # str
         self.__init__operand2 = operand2; # Expr
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class AssnExpr(Expr):
     def __init__(self, linenoRange, lhs, rhs):
-        # TODO: May need one more layer of abstration.
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__rhs = rhs # Expr
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class AutoExpr(Expr):
     def __init__(self, linenoRange, lhs, operator, loc):
-        # TODO: May need one more layer of abstration.
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__operator = operator # str: 'inc' or 'dec'
         self.__loc = loc # str: 'post' or 'pre'
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class FieldAccExpr(Expr):
-    def __init__(self, linenoRange):
-
-        Expr.__init__(self, linenoRange)
+    def __init__(self, linenoRange, baseClsExpr, accessId):
+        self.__baseClsExpr = baseClsExpr
+        self.__accessId = accessId
+        super(Expr, self).__init__(self, linenoRange)
+    def getAccessId(self):return self.__accessId
 
 class MethodInvExpr(Expr):
-    def __init__(self, linenoRange):
-
-        Expr.__init__(self, linenoRange)
+    def __init__(self, linenoRange, baseClsExpr, methNameStr, args):
+        self.__baseClsExpr = baseClsExpr
+        self.__methNameStr = methNameStr
+        self.__args = args#type: args_plus_cls
+        super(Expr, self).__init__(self, linenoRange)
 
 class NewObjExpr(Expr):
-    def __init__(self, linenoRange):
-
-        Expr.__init__(self, linenoRange)
+    def __init__(self, linenoRange, baseClsName, args):
+        self.__baseClsName = baseClsName
+        self.__args = args#type: args_plus_cls
+        super(Expr, self).__init__(self, linenoRange)
 
 class ThisExpr(Expr):
     def __init__(self, linenoRange):
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
+    def getBaseClsName(self):
+        return 'This'
 
 class SuperExpr(Expr):
     def __init__(self, linenoRange):
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
+    def getBaseClsName(self):
+        return 'Super'
 
 class ClsRefExpr(Expr):
     def __init__(self, linenoRange):
 
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class ArryAccExpr(Expr):
     def __init__(self, linenoRange):
 
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
 class NewArryExpr(Expr):
     def __init__(self, linenoRange):
 
-        Expr.__init__(self, linenoRange)
+        super(Expr, self).__init__(self, linenoRange)
 
+
+class args_plus_cls():
+    def __init__(self, linenoRange):
+        self.__args_list = []
+    def addArgs(self, arg):
+        self.__args_list.append(arg)
+    def getArgsList(self):
+        return self.__args_list
 
 
 

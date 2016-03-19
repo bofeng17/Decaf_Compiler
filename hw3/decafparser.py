@@ -98,22 +98,62 @@ def p_field_decl(p):
     for var in p[2]:
         tmp_field_rec = ast.FieldRecord(p[1] ,var)
         new_field_list.addField(tmp_field_rec)
-        ast.FieldTable.addFieldToGlobFieldTab(tmp_field_rec)
+        # ast.FieldTable.addFieldToGlobFieldTab(tmp_field_rec)
     p[0] = new_field_list
 
+#vis: public or private
+#app: static or instance
+
+"""Scope layout:
+        f(formals)
+        { 0
+            { 1
+                { 2
+
+                }
+            }
+            { 1
+
+            }
+        }
+
+"""
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
-    p[0] = ast.MethodRecord(p[3], None, p[1][0], p[1][1], "void", p[5].mergeRecordList(p[7][0]), p[7][1]) # TODO: verify last two
+    #Note: set scope first, so that var tables's scope will be set recursively
+    #before we flatten the var tables below
+    p[7].setAllStmtScope(0)
+    p[5].setScope(0)#set formals the outterest scope
+    new_var_table = ast.VariableTable()
+    new_var_table = p[7].getAllLocVarStmtTables(new_var_table)
+    p[0] = ast.MethodRecord(p[3], None, p[1].getVis(), p[1].getApp(), "void", p[5].mergeVariableTable(new_var_table), p[7])
+    p[0].assignIDsForVarTab()
+    # ast.MethodTable
+#vis: public or private
+#app: static or instance
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
-    # TODO: verify last two
-    # p[5]: VariableTable for all formals, needs to merge with VariableRecord for all locals
-    # p[7]: [list of variableRecord, BlockStatement]
-    p[0] = ast.MethodRecord(p[3], None, p[1][0], p[1][1], p[2], p[5].mergeRecordList(p[7][0]), p[7][1])
+    p[7].setAllStmtScope(0)
+    p[5].setScope(0)#set formals the outterest scope
 
+    new_var_table = ast.VariableTable()
+    new_var_table = p[7].getAllLocVarStmtTables(new_var_table)
+    p[0] = ast.MethodRecord(p[3], None, p[1].getVis(), p[1].getApp(), p[2], p[5].mergeVariableTable(new_var_table), p[7])
+    p[0].assignIDsForVarTab()
+
+#block is type: blockStmt has a list of various kinds of stmts
+#vis: public or private
+#app: static or instance
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
-    p[0] = ast.CtorRecord(p[1][0], p[4].getAllFormals(), p[4].mergeRecordList(p[6][0]), p[6][1]) # TODO: verify last two
+#!!!Important:construct scope first, before trying to flatten the variable tables
+    p[6].setAllStmtScope(0)
+    p[5].setScope(0)#set formals the outterest scope
+
+    new_var_table = ast.VariableTable()
+    new_var_table = p[6].getAllLocVarStmtTables(new_var_table)
+    p[0] = ast.CtorRecord(p[1].getVis(), p[4].getAllFormalsOrLocals('Formal'), p[4].mergeVariableTable(new_var_table), p[6])
+    p[0].assignIDsForVarTab()
 
 
 def p_mod(p):
@@ -170,43 +210,48 @@ def p_var_list_single(p):
 
 def p_var_id(p):
     'var : ID'
-    # var_cls: varId, arrayDim, varType, lineno(TODO)
-    p[0] = ast.var_cls(p[1], None, None, None)
+    # var_cls: varId, arrayDim, varType
+    p[0] = ast.var_cls(p[1], [], None)
 
 def p_var_array(p):
     'var : var LBRACKET RBRACKET'
-    p[1].AddArrayDim()
+    p[1].addArrayDim()
     p[0] = p[1]
 
+#param_list_opt is type: VariableTable
+#TODO: for now it's blockstmt, flatten it if neccessary
 def p_param_list_opt(p):
     'param_list_opt : param_list'
     p[0] = p[1]
+
 def p_param_list_empty(p):
     'param_list_opt : '
-    p[0] = ast.VariableTable() # TODO: pass an empty VariableTable instead of None
+    p[0] = ast.VariableTable()
 
 def p_param_list(p):
     'param_list : param_list COMMA param'
-    p[3].setVarId(p[1].assignId())
-    p[1].AddVar(p[3])
+    p[1].AddVarRecord(p[3])
     p[0] = p[1]
+
+#param_list is type: variabletable
 def p_param_list_single(p):
     'param_list : param'
     p[0] = ast.VariableTable()
-    p[1].setVarId(p[0].assignId())
-    p[0].AddVar(p[1])
+    p[0].AddVarRecord(p[1])
 
+#var is type: var_cls
+#param is type: variablerecord
 def p_param(p):
     'param : type var'
-    p[2][1].append(p[1])
-    p[0] = ast.VariableRecord(p[2][0], None, 'formal', p[2][1])
+    p[2].setType(p[1])
+    p[2].setLocOrFormal('Formal')
+    p[0] = ast.VariableRecord(p[2], 'formal')
 
 
 # Statements
-
+#block is type: blockstmt
 def p_block(p):
     'block : LBRACE stmt_list RBRACE'
-    # TODO: scope info
     p[0] = p[2]
 def p_block_error(p):
     'block : LBRACE stmt_list error RBRACE'
@@ -221,7 +266,7 @@ def p_stmt_list_empty(p):
 def p_stmt_list(p):
     'stmt_list : stmt_list stmt'
     p[1].addStmt(p[2])
-    p[1].setLinenoRange(p.linespan(0))
+    # p[2].setLinenoRange(p.linespan(0)) #each stmt should have its own range
     p[0] = p[1]
 
 
@@ -252,15 +297,24 @@ def p_stmt_continue(p):
 def p_stmt_block(p):
     'stmt : block'
     p[0] = p[1] # p[1]: BlockStmt
+
+#var_decl is type: var_cls_list
+#we construct VariableTable out of the var_cls_list
 def p_stmt_var_decl(p):
     'stmt : var_decl'
-    # TODO: VarDeclStmt is a stub
-    p[0] = ast.VarDeclStmt(p.linespan(0))
+    vartable = ast.VariableTable()
+    for var in p[1]:
+        varrec = ast.VariableRecord(var, 'Local')
+        vartable.addVarRecord(varrec)
+    p[0] = ast.VarDeclStmt(vartable, p.linespan(0))
+
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
     print("Invalid statement near line {}".format(p.lineno(1)))
     decaflexer.errorflag = True
     p[0] = ast.SkipStmt(p.linespan(0))
+
+
 
 
 # Expressions
@@ -283,7 +337,7 @@ def p_literal_false(p):
     'literal : FALSE'
     p[0] = ast.ConstExpr(p.linespan(0), 'False', None)
 
-# TODO: primary may need additional layer of abstration
+#primary is just a intermiedate container, it should be one of the expr types
 def p_primary_literal(p):
     'primary : literal'
     p[0] = p[1] # p[1]: constExpr
@@ -295,56 +349,71 @@ def p_primary_super(p):
     p[0] = ast.SuperExpr(p.linespan(0))
 def p_primary_paren(p):
     'primary : LPAREN expr RPAREN'
-    pass
+    p[0] = p[1]
+
 def p_primary_newobj(p):
     'primary : NEW ID LPAREN args_opt RPAREN'
-    pass
+    p[0] = ast.NewObjExpr(p.linespan(0), p[2], p[4])
+
 def p_primary_lhs(p):
-    'primary : lhs'
-    pass
+    'primary : lhs'#lhs should be one of the access_exprs
+    p[0] = p[1]
+
 def p_primary_method_invocation(p):
     'primary : method_invocation'
-    pass
+    p[0] = p[1]
 
 def p_args_opt_nonempty(p):
-    'args_opt : arg_plus'
-    pass
+    'args_opt : arg_plus' #args_opt is type: args_plus_cls
+    p[0] = p[1]
 def p_args_opt_empty(p):
     'args_opt : '
-    pass
+    p[0] = ast.args_plus_cls()
 
 def p_args_plus(p):
     'arg_plus : arg_plus COMMA expr'
-    pass
+    p[1].addArgs(p[3])
+    p[0] = p[1]
 def p_args_single(p):
     'arg_plus : expr'
-    pass
+    p[0] = ast.args_plus_cls()
+    p[0].addArgs(p[1])
 
 def p_lhs(p):
     '''lhs : field_access
            | array_access'''
-    pass
+    p[0] = p[1]
 
+#primary is an expr_wildcard
 def p_field_access_dot(p):
     'field_access : primary DOT ID'
-    pass
+    p[0] = ast.FieldAccExpr(p[1], p[3])
+
+#field_access here could be "real" field_access(1)
+#                           or variable_access(2)
+#                           or class_reference(3)
+#according to instruction, will check in following order:
+#                               (1) (2) (3) (1 again, assume it will later declared in a field)
 def p_field_access_id(p):
     'field_access : ID'
-    pass
+#TODO: check scope rightaway or fill it up after AST construction?
+    p[0] = ast.FieldAccExpr(None, p[1])
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
-    pass
 
 def p_method_invocation(p):
+#args_opt should be a list of expressions
     'method_invocation : field_access LPAREN args_opt RPAREN'
-    pass
+    p[0] = ast.MethodInvExpr(p.linespan(0),p[1], p[1].getAccessId(), p[3])
 
+#assign here has two possible types: assnexpr and autoexpr
 def p_expr_basic(p):
     '''expr : primary
             | assign
             | new_array'''
-    pass
+    p[0] = p[1]
+
 def p_expr_binop(p):
     '''expr : expr PLUS expr
             | expr MINUS expr
@@ -372,11 +441,11 @@ def p_assign_equals(p):
 def p_assign_post(p):
     '''assign : lhs INC
               | lhs DEC'''
-    p[0] = ast.AutoExpr(p.linespan(0), p[1], p[2], 'post')
+    p[0] = ast.AutoExpr(p.linespan(0), p[1], p[2], 'Post')
 def p_assign_pre(p):
     '''assign : INC lhs
             | DEC lhs'''
-    p[0] = ast.AutoExpr(p.linespan(0), p[2], p[1], 'pre')
+    p[0] = ast.AutoExpr(p.linespan(0), p[2], p[1], 'Pre')
 
 def p_new_array(p):
     'new_array : NEW type dim_expr_plus dim_star'
@@ -400,6 +469,10 @@ def p_dim_star_empty(p):
     'dim_star : '
     pass
 
+
+
+
+#for stmts....
 def p_stmt_expr(p):
     '''stmt_expr : assign
                  | method_invocation'''
@@ -418,6 +491,10 @@ def p_expr_opt(p):
 def p_expr_empty(p):
     'expr_opt : '
     pass
+
+#expression over
+
+
 
 def p_error(p):
     if p is None:
