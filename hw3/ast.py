@@ -43,7 +43,7 @@ class CtorRecord:
         for varRec in self.__varTab:
             varRec.Print()
         print 'Constructor Body: '
-            self.__ctorBody.Print()
+        self.__ctorBody.Print()
 
 
 #var rec tables's var Id is assigned in TOP-DOWN manner
@@ -68,7 +68,7 @@ class MethodRecord:
         for varRec in self.__varTab:
             varRec.Print()
         print 'Method Body: '
-            self.__ctorBody.Print()
+        self.__ctorBody.Print()
 
 
 class ClassTable:
@@ -82,9 +82,11 @@ class ClassTable:
                 return rec
         return None
 
+    @staticmethod
     def Print():
         print '--------------------------------------------------------------------------------'
-        for classRec in ClassRecords:
+        print ClassTable.ClassRecords
+        for classRec in ClassTable.ClassRecords:
             classRec.Print()
 
 
@@ -294,7 +296,7 @@ class FieldRecord:
         print 'FIELD:', 
         print self.__fieldId, ',', self.__fieldName, ',',
         print self.__containingCls, ',', self.__fieldVis, ',',
-        print self.__fieldApp, ',', self.__fieldType
+        print self.__fieldApp, ',', self.__fieldType.Print()
 
 #need to add a flag to indicate this is a field_rec_list, a method or a ctor
 class cls_body_decl:

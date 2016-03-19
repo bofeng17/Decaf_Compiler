@@ -48,7 +48,7 @@ def p_class_decl(p):
     'class_decl : CLASS curClass extends LBRACE class_body_decl_list RBRACE'
     # class_body_decl_list: [CtorRecord list, MethodRecord list, FieldRecord list]
     # classRecord: (clsName, superClsName, ctors, methods, fields)
-    ast.ClassRecord(p[2], p[3], p[5].getCtorList(), p[5].getMethodList(), p[5].getFieldList())
+    p[0] = ast.ClassRecord(p[2], p[3], p[5].getCtorList(), p[5].getMethodList(), p[5].getFieldList())
 
 def p_class_decl_error(p):
     'class_decl : CLASS curClass extends LBRACE error RBRACE'
@@ -537,7 +537,7 @@ def from_file(filename):
     try:
         with open(filename, "rU") as f:
             init()
-            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=None)
+            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=1)
         return not decaflexer.errorflag
     except IOError as e:
         print "I/O error: %s: %s" % (filename, e.strerror)
