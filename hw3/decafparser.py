@@ -129,14 +129,14 @@ def p_field_decl(p):
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
     global curVarTable, curClass
-    p[0] = ast.MethodRecord(p[3], curClass, p[1].getVis(), p[1].getApp(), "void", curVarTable, p[7])
+    p[0] = ast.MethodRecord(p[3], p[5].getAllFormalsOrLocals('Formal'), curClass, p[1].getVis(), p[1].getApp(), "void", curVarTable, p[7])
     # ast.MethodTable
 #vis: public or private
 #app: static or instance
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
     global curVarTable, curClass
-    p[0] = ast.MethodRecord(p[3], curClass, p[1].getVis(), p[1].getApp(), p[2], curVarTable, p[7])
+    p[0] = ast.MethodRecord(p[3], p[5].getAllFormalsOrLocals('Formal'), curClass, p[1].getVis(), p[1].getApp(), p[2], curVarTable, p[7])
 
 #block is type: blockStmt has a list of various kinds of stmts
 #vis: public or private
@@ -249,12 +249,12 @@ def p_param(p):
 #block is type: blockstmt
 def p_block(p):
     'block : LBRACE scope_inc stmt_list scope_dec RBRACE' # scope_inc increase var:scope by 1
-    p[0] = p[2]
+    p[0] = p[3]
 def p_block_error(p):
     'block : LBRACE scope_inc stmt_list error scope_dec RBRACE'
     # error within a block; skip to enclosing block
     # TODO: AST for error block
-    p[0] = p[2]
+    p[0] = p[3]
 
 #stmt_list type: BlockStmt
 def p_stmt_list_empty(p):
