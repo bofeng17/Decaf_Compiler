@@ -490,7 +490,7 @@ class MethodInvExpr(Expr):
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange, baseClsName, args):
-        self.__baseClsName = baseClsName
+        self.__baseClsName = baseClsName#should be just string
         self.__args = args#type: args_plus_cls
         super(Expr, self).__init__(self, linenoRange)
 
@@ -507,20 +507,25 @@ class SuperExpr(Expr):
         return 'Super'
 
 class ClsRefExpr(Expr):
-    def __init__(self, linenoRange):
-
+    def __init__(self,  linenoRange):
         super(Expr, self).__init__(self, linenoRange)
 
 class ArryAccExpr(Expr):
-    def __init__(self, linenoRange):
-
+    def __init__(self, linenoRange, base_expr, index_expr):
+        self.__baseExpr = base_expr
+        self.__indexExpr = index_expr
         super(Expr, self).__init__(self, linenoRange)
 
 class NewArryExpr(Expr):
-    def __init__(self, linenoRange):
-
+    def __init__(self, base, dimexpr, linenoRange):#base is a str,
+        self.__base = base#[array, array, ..., baseTYpe]
+        self.__dimexpr = dimexpr
         super(Expr, self).__init__(self, linenoRange)
 
+class EmptyExpr(Expr):
+    def __init__(self, linenoRange):
+        super(Expr, self).__init__(self, linenoRange)
+        pass
 
 class args_plus_cls():
     def __init__(self, linenoRange):
