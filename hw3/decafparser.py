@@ -537,7 +537,7 @@ def from_file(filename):
     try:
         with open(filename, "rU") as f:
             init()
-            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=1)
+            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=None)
         return not decaflexer.errorflag
     except IOError as e:
         print "I/O error: %s: %s" % (filename, e.strerror)
@@ -549,7 +549,7 @@ if __name__ == "__main__" :
             level=logging.CRITICAL,
     )
     log = logging.getLogger()
-    res = parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=1)
+    res = parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=None)
 
     if parser.errorok :
         print("Parse succeed")
