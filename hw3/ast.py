@@ -74,7 +74,7 @@ class MethodRecord:
 class ClassTable:
     """The table to store all class intances created"""
     ClassRecords = []
-    
+
     @staticmethod
     def findRecordById(Id): # search id in a scope descendent manner, return the closest match
         for rec in ClassTable.ClassRecords:
@@ -477,35 +477,71 @@ class Expr(object):
         self.__linenoRange = linenoRange
     def getLinenoRange(self):
         return self.__linenoRange
+    def Print(self):
+        assert False,"should never be called"
 
 class ConstExpr(Expr):
     def __init__(self, linenoRange, expr_type, val):
         self.__type = expr_type # str: 'Integer-constant', 'Float-constant', 'String-constant', 'Null', 'True', 'False'
         self.__val = val # int: 'Integer-constant', float: 'Float-constant', str: 'String-constant', None for others
         super(ConstExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Constant(",
+        if self.__type == "Integer-constant":
+            print "Integer-constant(",
+        if self.__type == "Float-constant":
+            print "Float-constant(",
+        if self.__type == "String-constant":
+            print "String-constant(",
+        print self.__val,
+        print ")",
+        print ")",
 
 class VarExpr(Expr):
-    def __init__(self, linenoRange):
+    def __init__(self, varRec,linenoRange):
+        self.__variableRecord = varRec
         super(VarExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Variable(",
+        print self.__variableRecord.getVarId(),
+        print ")",
 
 class UnaryExpr(Expr):
-    def __init__(self, linenoRange, operand, uniaryOperator):
-        self.__init__operand = operand; # Expr
-        self.__uniaryOperator = uniaryOperator; # str
+    def __init__(self, linenoRange, operand, unaryOperator):
+        self.__operand = operand; # Expr
+        self.__unaryOperator = unaryOperator; # str
         super(UnaryExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Unary(",
+        print self.__unaryOperator+",",
+        self.__operand.Print()
+        print ")",
 
 class BinaryExpr(Expr):
     def __init__(self, linenoRange, operand1, operator, operand2):
-        self.__init__operand1 = operand1; # Expr
-        self.__init__operator = operator; # str
-        self.__init__operand2 = operand2; # Expr
+        self.__operand1 = operand1; # Expr
+        self.__operator = operator; # str
+        self.__operand2 = operand2; # Expr
         super(BinaryExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Binary(",
+        print self.__operator+", ",
+        self.__operand1.Print()
+        print ",",
+        self.__operand2.Print()
+        print ")",
 
 class AssnExpr(Expr):
     def __init__(self, linenoRange, lhs, rhs):
         self.__lhs = lhs # FieldAccExpr/ArryAccExpr
         self.__rhs = rhs # Expr
         super(AssnExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Assign(",
+        self.__lhs.Print()
+        print ",",
+        self.__rhs.Print()
+        print ")",
 
 class AutoExpr(Expr):
     def __init__(self, linenoRange, lhs, operator, loc):
@@ -513,6 +549,13 @@ class AutoExpr(Expr):
         self.__operator = operator # str: 'inc' or 'dec'
         self.__loc = loc # str: 'post' or 'pre'
         super(AutoExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Auto(",
+        self.__lhs.Print()
+        print ",",
+        print self.__operator+",",
+        print self.__loc,
+        print ")",
 
 class FieldAccExpr(Expr):
     def __init__(self, linenoRange, baseClsExpr, accessId):
@@ -522,52 +565,105 @@ class FieldAccExpr(Expr):
     def getBaseClsExpr(self):return self.__baseClsExpr
     def getAccessId(self):return self.__accessId
 
+    def Print(self):
+        print "Field-access(",
+        self.__baseClsExpr.Print()
+        print ",",
+        print self.__accessId
+        print ")",
+
 class MethodInvExpr(Expr):
     def __init__(self, linenoRange, baseClsExpr, methNameStr, args):
         self.__baseClsExpr = baseClsExpr
         self.__methNameStr = methNameStr
         self.__args = args#type: args_plus_cls
         super(MethodInvExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Method-call(",
+
+        self.__baseClsExpr.Print()
+        print ",",
+
+        print self.__methNameStr+",",
+
+        print ",".join([arg.Print() for arg in self.__args]),
+
+        print ")",
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange, baseClsName, args):
         self.__baseClsName = baseClsName#should be just string
         self.__args = args#type: args_plus_cls
         super(NewObjExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "New-object(",
+        print self.__baseClsName+", ",
+        print ",".join([arg.Print() for arg in self.__args]),
+        print ")",
 
 class ThisExpr(Expr):
     def __init__(self, linenoRange):
         super(ThisExpr, self).__init__(linenoRange)
-    def getBaseClsName(self):
-        return 'This'
+    def Print(self):
+        print 'This',
 
 class SuperExpr(Expr):
     def __init__(self, linenoRange):
         super(SuperExpr, self).__init__(linenoRange)
-    def getBaseClsName(self):
-        return 'Super'
+    def Print(self):
+        print 'Super',
 
 class ClsRefExpr(Expr):
     def __init__(self, linenoRange, className):
         self.__className = className
         super(ClsRefExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "Class-reference(",
+        print self.className
+        print ")",
 
 class ArryAccExpr(Expr):
     def __init__(self, linenoRange, base_expr, index_expr):
         self.__baseExpr = base_expr
         self.__indexExpr = index_expr
         super(ArryAccExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "ArrayAccess(",
+        self.__baseExpr.Print()
+        print ', ',
+        self.__indexExpr.Print()
+        print ")",
 
 class NewArryExpr(Expr):
     def __init__(self, linenoRange, base, dimexpr):#base is a str,
         self.__base = base#[array, array, ..., baseTYpe]
         self.__dimexpr = dimexpr # [dim1, dim2, ...]
         super(NewArryExpr, self).__init__(linenoRange)
+    def Print(self):
+        print "New-arrayr(", #print 'New-array( '
+
+        for each in self.__base:#print 'array(array(...array(baseType))), '
+            if each == 'array':
+                print each + '(',
+            else:
+                print each,
+        for each in self.__base:
+            if each == 'array':
+                print ')',
+        print ", ",
+
+        print ','.join([eachexpr.Print() for eachexpr in self.__dimexpr]),
+
+        print ')',
 
 class EmptyExpr(Expr):
     def __init__(self, linenoRange):
         super(EmptyExpr, self).__init__(linenoRange)
-        pass
+
+    def Print(self):
+        print "Empty",
+
+
 
 class args_plus_cls(): # Expr, Expr , ..., Expr
     def __init__(self):
@@ -576,8 +672,6 @@ class args_plus_cls(): # Expr, Expr , ..., Expr
         self.__args_list.append(arg)
     def getArgsList(self):
         return self.__args_list
-
-
 
 
 

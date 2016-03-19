@@ -403,19 +403,19 @@ def p_field_access_id(p):
     global curVarTable, curScope
     record = curVarTable.findRecordById(p[1], curScope)
     if record:
-        p[0] = ast.VarExpr(record) # record: VariableRecord
+        p[0] = ast.VarExpr(record, p.linespan(0)) # record: VariableRecord
         return
     # if class_reference
     global curClass
     if curClass == p[1]: # if current class
-        p[0] = ast.VarExpr(ast.ClsRefExpr(p.linespan(1), curClass))
+        p[0] = ast.ClsRefExpr(p.linespan(1), curClass)
         return
     record = ast.ClassTable.findRecordById(p[1])
     if record: # if previoud class
-        p[0] = ast.VarExpr(ast.ClsRefExpr(p.linespan(1), record.getClsName())) # record: ClassRecord
+        p[0] = ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
         return
     # default
-    p[0] = ast.VarExpr(ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1]))
+    p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
