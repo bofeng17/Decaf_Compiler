@@ -26,6 +26,7 @@ precedence = (
 
 curScope = -1 # global var
 curVarTable = None # variable talbe of current block. Set by param_list (formals), accessed by var_decl(locals)
+curClass = None # set by class_decl, accessed by field_decl, field_access
 
 def init():
     decaflexer.errorflag = False
@@ -47,8 +48,8 @@ def p_class_decl(p):
     'class_decl : CLASS ID extends LBRACE class_body_decl_list RBRACE'
     # class_body_decl_list: [CtorRecord list, MethodRecord list, FieldRecord list]
     # classRecord: (clsName, superClsName, ctors, methods, fields)
+    curClass = p[2] # global varible, set by class_decl and accessed by field_decl, field_access
     ast.ClassRecord(p[2], p[3], p[5].getCtorList(), p[5].getMethodList(), p[5].getFieldList())
-    p[5].setContainingCls(p[2])
 
 def p_class_decl_error(p):
     'class_decl : CLASS ID extends LBRACE error RBRACE'
@@ -98,7 +99,7 @@ def p_field_decl(p):
     'field_decl : mod var_decl'
     new_field_list = ast.field_cls_list()
     for var in p[2]:
-        tmp_field_rec = ast.FieldRecord(p[1] ,var)
+        tmp_field_rec = ast.FieldRecord(p[1] ,var, curClass)
         new_field_list.addField(tmp_field_rec)
         # ast.FieldTable.addFieldToGlobFieldTab(tmp_field_rec)
     p[0] = new_field_list
@@ -122,33 +123,20 @@ def p_field_decl(p):
 """
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
-    # TODO:
-    new_var_table = ast.VariableTable()
-    new_var_table = p[7].getAllLocVarStmtTables(new_var_table)
-    p[0] = ast.MethodRecord(p[3], None, p[1].getVis(), p[1].getApp(), "void", p[5].mergeVariableTable(new_var_table), p[7])
-    p[0].assignIDsForVarTab()
+    p[0] = ast.MethodRecord(p[3], curClass, p[1].getVis(), p[1].getApp(), "void", curVarTable, p[7])
     # ast.MethodTable
 #vis: public or private
 #app: static or instance
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
-    new_var_table = ast.VariableTable()
-    new_var_table = p[7].getAllLocVarStmtTables(new_var_table)
-    p[0] = ast.MethodRecord(p[3], None, p[1].getVis(), p[1].getApp(), p[2], p[5].mergeVariableTable(new_var_table), p[7])
-    p[0].assignIDsForVarTab()
+    p[0] = ast.MethodRecord(p[3], curClass, p[1].getVis(), p[1].getApp(), p[2], curVarTable, p[7])
 
 #block is type: blockStmt has a list of various kinds of stmts
 #vis: public or private
 #app: static or instance
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
-#!!!Important:construct scope first, before trying to flatten the variable tables
-    p[5].setScope(0)#set formals the outterest scope
-
-    new_var_table = ast.VariableTable()
-    new_var_table = p[6].getAllLocVarStmtTables(new_var_table)
-    p[0] = ast.CtorRecord(p[1].getVis(), p[4].getAllFormalsOrLocals('Formal'), p[4].mergeVariableTable(new_var_table), p[6])
-    p[0].assignIDsForVarTab()
+    p[0] = ast.CtorRecord(p[1].getVis(), p[4].getAllFormalsOrLocals('Formal'), curVarTable, p[6])
 
 
 def p_mod(p):
@@ -265,7 +253,7 @@ def p_stmt_list_empty(p):
 def p_stmt_list(p):
     'stmt_list : stmt_list stmt'
     p[1].addStmt(p[2])
-    p[1].setLinenoRange(p.linespan(0)) # each stmt should have its own range, so shouldn't modify p[2]'s
+    p[1].setLinenoRange(p.linespan(0)) # update linespan
     p[0] = p[1]
 
 
@@ -303,8 +291,7 @@ def p_stmt_var_decl(p):
     'stmt : var_decl'
     for var in p[1]:
         varrec = ast.VariableRecord(var, 'Local', curScope)
-        # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
-        curVarTable.addVarRecord(varrec)
+        curVarTable.addVarRecord(varrec) # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
     p[0] = ast.VarDeclStmt(p.linespan(0), curVarTable)
 
 def p_stmt_error(p):
@@ -372,6 +359,7 @@ def p_args_opt_empty(p):
 def p_args_plus(p):
     'arg_plus : arg_plus COMMA expr'
     p[1].addArgs(p[3])
+    p[1].setLinenoRange(p.linespan(0))
     p[0] = p[1]
 def p_args_single(p):
     'arg_plus : expr'
@@ -386,7 +374,7 @@ def p_lhs(p):
 #primary is an expr_wildcard
 def p_field_access_dot(p):
     'field_access : primary DOT ID'
-    p[0] = ast.FieldAccExpr(p[1], p[3])
+    p[0] = ast.FieldAccExpr(p.linespan(0), p[1], p[3])
 
 #field_access here could be "real" field_access(1)
 #                           or variable_access(2)
@@ -395,8 +383,16 @@ def p_field_access_dot(p):
 #                               (1) (2) (3) (1 again, assume it will later declared in a field)
 def p_field_access_id(p):
     'field_access : ID'
-#TODO: check scope rightaway or fill it up after AST construction?
-    p[0] = ast.FieldAccExpr(None, p[1])
+    if FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
+        p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
+    elif (record = curVarTable.findRecordById(p[1], curScope)):
+        p[0] = record # record: VariableRecord
+    elif curClass == p[1]: # name of current class
+        ast.ClsRefExpr(p.linespan(1), curClass) # record: ClassRecord
+    elif (record = ClassTable.findRecordById(p[1])): # previoud class
+        ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
+    else:
+        p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
@@ -405,7 +401,7 @@ def p_array_access(p):
 def p_method_invocation(p):
 #args_opt should be a list of expressions
     'method_invocation : field_access LPAREN args_opt RPAREN'
-    p[0] = ast.MethodInvExpr(p.linespan(0),p[1], p[1].getAccessId(), p[3])
+    p[0] = ast.MethodInvExpr(p.linespan(0), p[1].getBaseClsExpr(), p[1].getAccessId(), p[3])
 
 #assign here has two possible types: assnexpr and autoexpr
 def p_expr_basic(p):
@@ -450,7 +446,7 @@ def p_assign_pre(p):
 def p_new_array(p):
     'new_array : NEW type dim_expr_plus dim_star'
     p[4].append(p[2])#[array, array, ..., array].append(baseTYpe)
-    p[0] = ast.NewArryExpr(p[4], p[3],p.linespan(0))
+    p[0] = ast.NewArryExpr(p.linespan(0), p[4], p[3])
 
 def p_dim_expr_plus(p):
     'dim_expr_plus : dim_expr_plus dim_expr'
@@ -478,7 +474,7 @@ def p_dim_star_empty(p):
 def p_stmt_expr(p):
     '''stmt_expr : assign
                  | method_invocation'''
-    p[0] = ast.StmtExprStmt(p[1])
+    p[0] = p[1]
 
 def p_stmt_expr_opt(p):
     'stmt_expr_opt : stmt_expr'
@@ -500,10 +496,10 @@ def p_expr_empty(p):
 # handle scope inc/dec
 def p_scope_inc(p):
     'scope_inc: '
-    scope += 1
+    curScope += 1
 def p_scope_dec(p):
     'scope_dec: '
-    scope -= 1
+    curScope -= 1
 
 
 def p_error(p):

@@ -8,6 +8,8 @@ class ClassRecord:
         self.__methods = methods
         self.__fields = fields
 
+    def getClsName(self): return self.__clsName
+
 #var rec tables's var Id is assigned in TOP-DOWN manner
 class CtorRecord:
     """Record for decaf Constructors"""
@@ -17,12 +19,6 @@ class CtorRecord:
         self.__varTab = varTab#VariableTable after flatten, but with scope info
         self.__ctorBody = ctorBody#TODO: for now it's blockstmt, flatten it if neccessary
         self.__Vis = ctorVis
-#each method has a variable table which has its own set of var IDs
-    def assignIDsForVarTab(self):
-        Id = 0
-        for varRec in self.__varTab:
-            varRec.setId(Id)
-            Id+=1
 
 
 
@@ -42,19 +38,18 @@ class MethodRecord:
     def setContainingCls(self, clsName):
         self.__containingCls = clsName
 
-#each method has a variable table which has its own set of var IDs
-    def assignIDsForVarTab(self):
-        Id = 0
-        for varRec in self.__varTab:
-            varRec.setId(Id)
-            Id+=1
-
 
 
 
 class ClassTable:
     """The table to store all class intances created"""
     ClassRecords = []
+
+    def findRecordById(Id): # search id in a scope descendent manner, return the closest match
+        for rec in ClassTable.ClassRecords:
+            if rec.getVarId() == Id:
+                return rec
+        return None
 
 #TODO: we probably dont need a global ctor table
 class CtorTable:
@@ -99,6 +94,13 @@ class FieldTable:
     def addFieldToGlobFieldTab(field):
         FieldTable.FieldRecords.append(field)
 
+    @staticmethod
+    def findFieldById(self, Id, curClass):
+        for fr in FieldTable.FieldRecords:
+            if fr.getFieldId() == Id and fr.getContainingCls() == curClass
+                return True
+        return False
+
 #resemble the initialization of FieldRecord,
 #the contructor takes var_cls as input
 class VariableRecord:
@@ -142,12 +144,15 @@ class VariableTable:
     """A table of variables for a ctor/method"""
     def __init__(self):
         self.__varTable = []
+        self.__recCnt = 0
 
     def isTableEmpty(self):
         return len(self.__VarTable) == 0
 
     def addVarRecord(self, varRecord):
         self.__varTable.append(varRecord)
+        self.__recCnt += 1
+        varRecord.setVarId(self.__recCnt)
 
     def getVarTable(self): return self.__VarTable
 
@@ -161,9 +166,16 @@ class VariableTable:
             if var.getLocOrFormal() == kind:
                  ret.append(var)
         return ret # list of all formal or local var_records
-    def setScope(self, scope):
-        for varRec in self.__VarTable:
-            varRec.setScope(scope)
+
+    def findRecordById(self, Id, curScope): # search id in a scope descendent manner, return the closest match
+        i = curScope
+        while i >= 0:
+            for rec in __varTable:
+                if rec.getVarId() == Id and rec.getScope() == i:
+                    return rec
+            i -= 1
+        return None
+
 
 #Note: TypeRecord is the type of VariableRecord's __varType field
 class TypeRecord:
@@ -216,16 +228,19 @@ class mod_cls:
 
 class FieldRecord:
     """Record for decaf fields"""
-    def __init__(self, mod, var): #var is of type: var_cls
+    def __init__(self, mod, var, containingCls): #var is of type: var_cls
         self.__fieldName = var.getVarId()
         self.__fieldId = FieldTable.assignId()
-        self.__containingCls = ""
+        self.__containingCls = containingCls
         self.__fieldVis = mod.getVis() # public or private, default is private
         self.__fieldApp = mod.getApp() # static or instance
         self.__fieldType = var.getType()# __fieldtype will get a TypeRecord
 
     def setContainingCls(self, clsName):
         self.__containingCls = clsName
+
+    def getFieldId(self): return self.__fieldId
+    def getContainingCls(self): return self.__containingCls
 
 #need to add a flag to indicate this is a field_rec_list, a method or a ctor
 class cls_body_decl:
@@ -272,13 +287,13 @@ class cls_body_decl_list:
         self.__method_list.append(body_decl.getMethod())
     def addCtor(self, body_decl):
         self.__ctor_list.append(body_decl.getCtor())
-    def setContainingCls(self, clsName):
-        for field in self.__field_list:
-            field.setContainingCls(clsName)
-        for method in self.__method_list:
-            method.setContainingCls(clsName)
-        for ctor in self.__ctor_list:
-            ctor.setContainingCls(clsName)
+#    def setContainingCls(self, clsName):
+#        for field in self.__field_list:
+#            field.setContainingCls(clsName)
+#        for method in self.__method_list:
+#            method.setContainingCls(clsName)
+#        for ctor in self.__ctor_list:
+#            ctor.setContainingCls(clsName)
     def getFieldList(self):return self.__field_list
     def getMethodList(self):return self.__method_list
     def getCtorList(self):return self.__ctor_list#TODO: probably not allow more than one ctor
@@ -437,9 +452,10 @@ class AutoExpr(Expr):
 
 class FieldAccExpr(Expr):
     def __init__(self, linenoRange, baseClsExpr, accessId):
-        self.__baseClsExpr = baseClsExpr
+        self.__baseClsExpr = baseClsExpr # maybe ExmptyExpr
         self.__accessId = accessId
         super(Expr, self).__init__(self, linenoRange)
+    def getBaseClsExpr(self):return self.__baseClsExpr
     def getAccessId(self):return self.__accessId
 
 class MethodInvExpr(Expr):
@@ -468,7 +484,8 @@ class SuperExpr(Expr):
         return 'Super'
 
 class ClsRefExpr(Expr):
-    def __init__(self,  linenoRange):
+    def __init__(self, linenoRange, className):
+        self.__className = className
         super(Expr, self).__init__(self, linenoRange)
 
 class ArryAccExpr(Expr):
@@ -478,7 +495,7 @@ class ArryAccExpr(Expr):
         super(Expr, self).__init__(self, linenoRange)
 
 class NewArryExpr(Expr):
-    def __init__(self, base, dimexpr, linenoRange):#base is a str,
+    def __init__(self, linenoRange, base, dimexpr):#base is a str,
         self.__base = base#[array, array, ..., baseTYpe]
         self.__dimexpr = dimexpr
         super(Expr, self).__init__(self, linenoRange)
@@ -488,7 +505,7 @@ class EmptyExpr(Expr):
         super(Expr, self).__init__(self, linenoRange)
         pass
 
-class args_plus_cls():
+class args_plus_cls(): # Expr, Expr , ..., Expr
     def __init__(self, linenoRange):
         self.__args_list = []
     def addArgs(self, arg): # arg: Expr
