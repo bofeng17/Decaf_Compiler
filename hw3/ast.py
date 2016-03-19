@@ -35,7 +35,7 @@ class MethodRecord:
         self.__containingCls = containingCls
         self.__methVis = methVis
         self.__methApp = methApp
-        self.__retType = retType
+        self.__retType = retType # TODO: currently str, instead of type record
         self.__varTab = varTab #VariableTable after flatten, but with scope info
         self.__methBody = methBody#TODO: for now it's blockstmt, flatten it if neccessary
 
@@ -106,12 +106,12 @@ class VariableRecord:
        varKind: formal/local
     """
     #var is type: var_cls
-    def __init__(self, var, varKind):
+    def __init__(self, var, varKind, scope):
         self.__varName = var.getVarName()
         self.__varId = None
         self.__varKind = varKind # str: formal or local
         self.__varType = var.getType()# var_cls will construct a type_record
-        self.__scope = None
+        self.__scope = scope
     def SetKind(self, kind):
         self.__varKind = kind
 
@@ -175,7 +175,7 @@ class TypeRecord:
 class var_cls:
     def __init__(self, varName, arrayDim, varType):
         self.__varName = varName
-        self.__arrayDim = arrayDim
+        self.__arrayDim = arrayDim # list, empyt initially
         self.__varBaseType = varType#This is the base type
         self.__Loc_or_formal = None
     def addArrayDim(self): self.__arrayDim.append('array')
@@ -286,9 +286,13 @@ class cls_body_decl_list:
 
 """Below are statements related classes ############################################"""
 class Stmt(object):
-    def __init__(self, stmtType, linenoRange): # linenoRange: (startlineno, endlineno)
+    def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
         self.__scope = None
+
+    def setScope(self, scope):
+        self.__Scope = scope
+    def getScope(self, scope):return self.__scope
 
     def setLinenoRange(self, range):self.__linenoRange = range
     def getLinenoRange(self):return self.__linenoRange
@@ -307,10 +311,6 @@ class BlockStmt(Stmt):
 
     def getVariableTable(self):
         return self.__VariableTable
-
-
-    def setScope(self, scope):self.__scope = scope
-    def getScope(self, scope):return self.__scope
 
     def addStmt(self, item):
         self.__StmtList.append(item)
@@ -337,83 +337,48 @@ class IfStmt(Stmt):
     def __init__(self, linenoRange, condExpr, thenStmt, elseStmt = None):
         self.__condExpr = condExpr # Expr
         self.__thenStmt = thenStmt # Stmt
-        self.__elseStmt = elseStmt # Stmt, may be None
+        self.__elseStmt = elseStmt # Stmt, may be SkipStmt
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class WhileStmt(Stmt):
     def __init__(self, linenoRange, condExpr, bodyStmt):
         self.__condExpr = condExpr # Expr
         self.__bodyStmt = bodyStmt # Stmt
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class ForStmt(Stmt):
     def __init__(self, linenoRange, initExpr, lpCondExpr, updExpr, bodyStmt):
-        self.__initExpr = initExpr # StmtExpr, may be None
-        self.__lpCondExpr = lpCondExpr # Expr, may be None
-        self.__updExpr = updExpr # StmtExpr, may be None
+        self.__initExpr = initExpr # StmtExpr, may be EmptyExpr
+        self.__lpCondExpr = lpCondExpr # Expr, may be EmptyExpr
+        self.__updExpr = updExpr # StmtExpr, may be EmptyExpr
         self.__bodyStmt = bodyStmt # Stmt
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class RetStmt(Stmt):
     def __init__(self, linenoRange, retValExpr = None):
-        self.__retValExpr = retValExpr # Expr, may be None
+        self.__retValExpr = retValExpr # Expr, may be EmptyExpr
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
-
-
-
 
 class ContStmt(Stmt):
     def __init__(self, linenoRange):
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class BrkStmt(Stmt):
     def __init__(self, linenoRange):
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class SkipStmt(Stmt):
-    def __init__(self, linenoRange):
+    def __init__(self, linenoRange): # don't care linenoRange
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class StmtExprStmt(Stmt):
     def __init__(self, linenoRange, StmtExpr):
         # TODO: May need one more layer of abstration-StmtExpr Class.
         self.__StmtExpr = StmtExpr # AssnExpr/AutoExpr/MethodInvExpr
         super(Stmt, self).__init__(self,  linenoRange)
-        self.__Scope = None
-
-    def setScope(self, scope):
-        self.__Scope = scope
 
 class VarDeclStmt(Stmt):
-    def __init__(self, variabletable, linenoRange):
+    def __init__(self, linenoRange, variabletable):
         super(Stmt, self).__init__(self,  linenoRange)
         self.__VariableTable = variabletable
 
@@ -425,11 +390,7 @@ class VarDeclStmt(Stmt):
 
 
 
-
-
-
 """Below are expression related classes ############################################"""
-# TODO: all things below
 class Expr(object):
     def __init__(self, linenoRange): # linenoRange: (startlineno, endlineno)
         self.__linenoRange = linenoRange
@@ -525,7 +486,7 @@ class NewArryExpr(Expr):
 class args_plus_cls():
     def __init__(self, linenoRange):
         self.__args_list = []
-    def addArgs(self, arg):
+    def addArgs(self, arg): # arg: Expr
         self.__args_list.append(arg)
     def getArgsList(self):
         return self.__args_list

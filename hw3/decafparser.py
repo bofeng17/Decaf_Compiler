@@ -24,6 +24,8 @@ precedence = (
     ('right', 'ELSE'),
 )
 
+curScope = -1 # global var
+curVarTable = None # variable talbe of current block. Set by param_list (formals), accessed by var_decl(locals)
 
 def init():
     decaflexer.errorflag = False
@@ -120,10 +122,7 @@ def p_field_decl(p):
 """
 def p_method_decl_void(p):
     'method_decl : mod VOID ID LPAREN param_list_opt RPAREN block'
-    #Note: set scope first, so that var tables's scope will be set recursively
-    #before we flatten the var tables below
-    p[7].setAllStmtScope(0)
-    p[5].setScope(0)#set formals the outterest scope
+    # TODO:
     new_var_table = ast.VariableTable()
     new_var_table = p[7].getAllLocVarStmtTables(new_var_table)
     p[0] = ast.MethodRecord(p[3], None, p[1].getVis(), p[1].getApp(), "void", p[5].mergeVariableTable(new_var_table), p[7])
@@ -133,9 +132,6 @@ def p_method_decl_void(p):
 #app: static or instance
 def p_method_decl_nonvoid(p):
     'method_decl : mod type ID LPAREN param_list_opt RPAREN block'
-    p[7].setAllStmtScope(0)
-    p[5].setScope(0)#set formals the outterest scope
-
     new_var_table = ast.VariableTable()
     new_var_table = p[7].getAllLocVarStmtTables(new_var_table)
     p[0] = ast.MethodRecord(p[3], None, p[1].getVis(), p[1].getApp(), p[2], p[5].mergeVariableTable(new_var_table), p[7])
@@ -147,7 +143,6 @@ def p_method_decl_nonvoid(p):
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
 #!!!Important:construct scope first, before trying to flatten the variable tables
-    p[6].setAllStmtScope(0)
     p[5].setScope(0)#set formals the outterest scope
 
     new_var_table = ast.VariableTable()
@@ -226,7 +221,9 @@ def p_param_list_opt(p):
 
 def p_param_list_empty(p):
     'param_list_opt : '
-    p[0] = ast.VariableTable()
+    # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
+    curVarTable = ast.VariableTable()
+    p[0] = curVarTable
 
 def p_param_list(p):
     'param_list : param_list COMMA param'
@@ -236,8 +233,10 @@ def p_param_list(p):
 #param_list is type: variabletable
 def p_param_list_single(p):
     'param_list : param'
-    p[0] = ast.VariableTable()
-    p[0].AddVarRecord(p[1])
+    # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
+    curVarTable = ast.VariableTable()
+    curVarTable.AddVarRecord(p[1])
+    p[0] = curVarTable
 
 #var is type: var_cls
 #param is type: variablerecord
@@ -245,16 +244,16 @@ def p_param(p):
     'param : type var'
     p[2].setType(p[1])
     p[2].setLocOrFormal('Formal')
-    p[0] = ast.VariableRecord(p[2], 'formal')
+    p[0] = ast.VariableRecord(p[2], 'formal', scope = 0)
 
 
 # Statements
 #block is type: blockstmt
 def p_block(p):
-    'block : LBRACE stmt_list RBRACE'
+    'block : LBRACE scope_inc stmt_list scope_dec RBRACE' # scope_inc increase var:scope by 1
     p[0] = p[2]
 def p_block_error(p):
-    'block : LBRACE stmt_list error RBRACE'
+    'block : LBRACE scope_inc stmt_list error scope_dec RBRACE'
     # error within a block; skip to enclosing block
     # TODO: AST for error block
     p[0] = p[2]
@@ -266,13 +265,13 @@ def p_stmt_list_empty(p):
 def p_stmt_list(p):
     'stmt_list : stmt_list stmt'
     p[1].addStmt(p[2])
-    # p[2].setLinenoRange(p.linespan(0)) #each stmt should have its own range
+    p[1].setLinenoRange(p.linespan(0)) # each stmt should have its own range, so shouldn't modify p[2]'s
     p[0] = p[1]
 
 
 def p_stmt_if_only(p):
     'stmt : IF LPAREN expr RPAREN stmt'
-    p[0] = ast.IfStmt(p.linespan(0), p[3], p[5])
+    p[0] = ast.IfStmt(p.linespan(0), p[3], p[5], ast.SkipStmt(p.linespan(0)))
 def p_stmt_if_else(p):
     'stmt : IF LPAREN expr RPAREN stmt ELSE stmt'
     p[0] = ast.IfStmt(p.linespan(0), p[3], p[5], p[7])
@@ -302,11 +301,11 @@ def p_stmt_block(p):
 #we construct VariableTable out of the var_cls_list
 def p_stmt_var_decl(p):
     'stmt : var_decl'
-    vartable = ast.VariableTable()
     for var in p[1]:
-        varrec = ast.VariableRecord(var, 'Local')
-        vartable.addVarRecord(varrec)
-    p[0] = ast.VarDeclStmt(vartable, p.linespan(0))
+        varrec = ast.VariableRecord(var, 'Local', curScope)
+        # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
+        curVarTable.addVarRecord(varrec)
+    p[0] = ast.VarDeclStmt(p.linespan(0), curVarTable)
 
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
@@ -320,13 +319,13 @@ def p_stmt_error(p):
 # Expressions
 def p_literal_int_const(p):
     'literal : INT_CONST'
-    p[0] = ast.ConstExpr(p.linespan(0), 'Integer-constant', p[1]) # p[1]: int
+    p[0] = ast.ConstExpr(p.linespan(0), 'Integer-constant', p[1]) # type of p[1]: int
 def p_literal_float_const(p):
     'literal : FLOAT_CONST'
-    p[0] = ast.ConstExpr(p.linespan(0), 'Float-constant', p[1]) # p[1]: float
+    p[0] = ast.ConstExpr(p.linespan(0), 'Float-constant', p[1]) # type of p[1]: float
 def p_literal_string_const(p):
     'literal : STRING_CONST'
-    p[0] = ast.ConstExpr(p.linespan(0), 'String-constant', p[1]) # p[1]: str
+    p[0] = ast.ConstExpr(p.linespan(0), 'String-constant', p[1]) # type of p[1]: str
 def p_literal_null(p):
     'literal : NULL'
     p[0] = ast.ConstExpr(p.linespan(0), 'Null', None)
@@ -376,7 +375,7 @@ def p_args_plus(p):
     p[0] = p[1]
 def p_args_single(p):
     'arg_plus : expr'
-    p[0] = ast.args_plus_cls()
+    p[0] = ast.args_plus_cls(p.linespan(0))
     p[0].addArgs(p[1])
 
 def p_lhs(p):
@@ -470,9 +469,7 @@ def p_dim_star_empty(p):
     pass
 
 
-
-
-#for stmts....
+# TODO:
 def p_stmt_expr(p):
     '''stmt_expr : assign
                  | method_invocation'''
@@ -480,20 +477,26 @@ def p_stmt_expr(p):
 
 def p_stmt_expr_opt(p):
     'stmt_expr_opt : stmt_expr'
-    pass
+    p[0] = p[1]
 def p_stmt_expr_empty(p):
     'stmt_expr_opt : '
-    pass
+    p[0] = None
 
 def p_expr_opt(p):
     'expr_opt : expr'
-    pass
+    p[0] = p[1]
 def p_expr_empty(p):
     'expr_opt : '
-    pass
-
+    p[0] = None
 #expression over
 
+# handle scope inc/dec
+def p_scope_inc(p):
+    'scope_inc: '
+    scope += 1
+def p_scope_dec(p):
+    'scope_dec: '
+    scope -= 1
 
 
 def p_error(p):
