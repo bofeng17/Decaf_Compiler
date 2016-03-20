@@ -60,7 +60,8 @@ def p_cur_class_id(p):
     global curClass
     curClass = p[1] # global varible, set by class_decl and accessed by field_decl, field_access
     if ast.ClassTable.findRecordByName(curClass):
-        print 'ClassNameDuplication Error for Class "' + p[1] + '" at lineno' + str(p.lineno(1))
+        print 'ClassNameDuplication Error for Class "' + p[1] + '" at lineno ',
+        ast.PrintLineNo(p.linespan(1)[0])
         sys.exit(-1)
     p[0] = p[1]
 

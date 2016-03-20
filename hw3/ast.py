@@ -200,7 +200,8 @@ class VariableTable:
 
     def addVarRecord(self, varRecord, linenoRange, curScope):
         if self.findRecByNameInSameScope(varRecord.getVarName(), curScope):
-            print 'VariableNameDuplication Error for Variable "' + varRecord.getVarName() + '" at lineno ' + str(linenoRange[0])
+            print 'VariableNameDuplication Error for Variable "' + varRecord.getVarName() + '" at lineno ',
+            PrintLineNo(linenoRange[0])
             sys.exit(-1)
         self.__varTable.append(varRecord)
         self.__recCnt += 1
@@ -363,7 +364,8 @@ class cls_body_decl_list:
     def addFieldList(self, body_decl, linenoRange):
         for field in body_decl.getFieldList():
             if self.findFieldByName(field.getFieldName()):
-                print 'FieldNameDuplication Error for Field "' + field.getFieldName() + '" at lineno ' + str(linenoRange[0])
+                print 'FieldNameDuplication Error for Field "' + field.getFieldName() + '" at lineno ',
+                PrintLineNo(linenoRange[0])
                 sys.exit(-1)
         self.__field_list.append(field)
     def addMethod(self, body_decl):
@@ -718,6 +720,9 @@ class args_plus_cls(): # Expr, Expr , ..., Expr
         self.__args_list.append(arg)
     def getArgsList(self):
         return self.__args_list
+
+def PrintLineNo(lineno):
+    print lineno - 12
 
 # class ClassNameDuplicationException(Exception):
 #     def __init__ (self, clsName):
