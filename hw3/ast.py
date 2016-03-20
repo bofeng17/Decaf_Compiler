@@ -198,7 +198,10 @@ class VariableTable:
     def isTableEmpty(self):
         return len(self.__VarTable) == 0
 
-    def addVarRecord(self, varRecord):
+    def addVarRecord(self, varRecord, linenoRange, curScope):
+        if self.findRecByNameInSameScope(varRecord.getVarName(), curScope):
+            print 'VariableNameDuplication Error for Variable "' + varRecord.getVarName() + '" at lineno ' + str(linenoRange[0])
+            sys.exit(-1)
         self.__varTable.append(varRecord)
         self.__recCnt += 1
         varRecord.setVarId(self.__recCnt)
@@ -223,6 +226,12 @@ class VariableTable:
                 if rec.getVarName() == Name and rec.getScope() == i:
                     return rec
             i -= 1
+        return None
+
+    def findRecByNameInSameScope(self, Name, curScope):
+        for rec in self.__varTable:
+            if rec.getVarName() == Name and rec.getScope() == curScope:
+                return rec
         return None
 
 
@@ -343,19 +352,20 @@ class cls_body_decl_list:
         self.__field_list = []
         self.__method_list = []
         self.__ctor_list = []
-    def addBodyDecl(self, body_decl):
+
+    def addBodyDecl(self, body_decl, linenoRange): # linenorange only for filedNameDuplication Check
         if body_decl.getFlag() == "field_list":
-            self.addFieldList(body_decl)
+            self.addFieldList(body_decl, linenoRange)
         elif body_decl.getFlag() == "method":
             self.addMethod(body_decl)
         elif body_decl.getFlag() == "ctor":
             self.addCtor(body_decl)
-    def addFieldList(self, body_decl):
+    def addFieldList(self, body_decl, linenoRange):
         for field in body_decl.getFieldList():
             if self.findFieldByName(field.getFieldName()):
-                print 'FieldNameDuplication Error for Field "' + field.getFieldName()
-        sys.exit(-1)
-        self.__field_list = self.__field_list.append(field)
+                print 'FieldNameDuplication Error for Field "' + field.getFieldName() + '" at lineno ' + str(linenoRange[0])
+                sys.exit(-1)
+        self.__field_list.append(field)
     def addMethod(self, body_decl):
         self.__method_list.append(body_decl.getMethod())
     def addCtor(self, body_decl):
@@ -365,9 +375,10 @@ class cls_body_decl_list:
     def getCtorList(self):return self.__ctor_list#TODO: probably not allow more than one ctor
 
     def findFieldByName(self, fieldName): # detect whether there is a field with the same name
-        for field in self.__field_list:
-            if field.getFieldName() == fieldName:
-                return True
+        if self.__field_list is not None: 
+            for field in self.__field_list:
+                if field.getFieldName() == fieldName:
+                    return True
         return False
 
 

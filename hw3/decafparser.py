@@ -73,12 +73,12 @@ def p_extends_empty(p):
 
 def p_class_body_decl_list_plus(p):
     'class_body_decl_list : class_body_decl_list class_body_decl'
-    p[1].addBodyDecl(p[2])
+    p[1].addBodyDecl(p[2], p.linespan(2))
     p[0] = p[1]
 def p_class_body_decl_list_single(p):
     'class_body_decl_list : class_body_decl'
     p[0] = ast.cls_body_decl_list()
-    p[0].addBodyDecl(p[1])
+    p[0].addBodyDecl(p[1], p.linespan(1))
 
 
 # class_body_decl: [CtorRecord, MethodRecord, FieldRecord partial list(because we can declare more than one Fields at one time)]
@@ -225,16 +225,17 @@ def p_param_list_empty(p):
 
 def p_param_list(p):
     'param_list : param_list COMMA param'
-    p[1].AddVarRecord(p[3])
+    global curScope
+    p[1].AddVarRecord(p[3], p.linespan(3), curScope)
     p[0] = p[1]
 
 #param_list is type: variabletable
 def p_param_list_single(p):
     'param_list : param'
     # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
-    global curVarTable
+    global curVarTable, curScope
     curVarTable = ast.VariableTable()
-    curVarTable.addVarRecord(p[1])
+    curVarTable.addVarRecord(p[1], p.linespan(1), curScope)
     p[0] = curVarTable
 
 #var is type: var_cls
@@ -303,7 +304,7 @@ def p_stmt_var_decl(p):
     for var in p[1].getVarList():
         global curVarTable, curScope
         varrec = ast.VariableRecord(var, 'Local', curScope)
-        curVarTable.addVarRecord(varrec) # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
+        curVarTable.addVarRecord(varrec, p.linespan(1), curScope) # curVarTable: global variable set by param_list (formals), accessed by var_decl(locals)
     p[0] = ast.VarDeclStmt(p.linespan(0))
 
 def p_stmt_error(p):
