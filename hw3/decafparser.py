@@ -59,6 +59,9 @@ def p_cur_class_id(p):
     'curClass : ID'
     global curClass
     curClass = p[1] # global varible, set by class_decl and accessed by field_decl, field_access
+    if ast.ClassTable.findRecordByName(curClass):
+        print 'ClassNameDuplication Error for Class "' + p[1] + '" at lineno' + str(p.lineno(1))
+        sys.exit(-1)
     p[0] = p[1]
 
 def p_extends_id(p):
@@ -106,7 +109,6 @@ def p_field_decl(p):
         global curClass
         tmp_field_rec = ast.FieldRecord(p[1] ,var, curClass)
         new_field_list.addField(tmp_field_rec)
-        # ast.FieldTable.addFieldToGlobFieldTab(tmp_field_rec)
     p[0] = new_field_list
 
 #vis: public or private

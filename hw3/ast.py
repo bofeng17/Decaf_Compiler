@@ -1,3 +1,4 @@
+import sys
 
 class ClassRecord:
     """Record for decaf classes"""
@@ -82,9 +83,9 @@ class ClassTable:
     ClassRecords = []
 
     @staticmethod
-    def findRecordByName(Id): # search id in a scope descendent manner, return the closest match
+    def findRecordByName(clsName): # search id in a scope descendent manner, return the closest match
         for rec in ClassTable.ClassRecords:
-            if rec.getClsName() == Id:
+            if rec.getClsName() == clsName:
                 return rec
         return None
 
@@ -130,10 +131,6 @@ class FieldTable:
     def assignId(): # Id starts from 1
         FieldTable.CurFieldId += 1
         return FieldTable.CurFieldId
-
-    @staticmethod
-    def addFieldToGlobFieldTab(field):
-        FieldTable.FieldRecords.append(field)
 
     @staticmethod
     def findFieldById(Id, curClass):
@@ -302,6 +299,7 @@ class FieldRecord:
 
 
     def getFieldId(self): return self.__fieldId
+    def getFieldName(self): return self.__fieldName
     def getContainingCls(self): return self.__containingCls
 
     def Print(self):
@@ -353,7 +351,11 @@ class cls_body_decl_list:
         elif body_decl.getFlag() == "ctor":
             self.addCtor(body_decl)
     def addFieldList(self, body_decl):
-        self.__field_list = self.__field_list + body_decl.getFieldList()
+        for field in body_decl.getFieldList():
+            if self.findFieldByName(field.getFieldName()):
+                print 'FieldNameDuplication Error for Field "' + field.getFieldName()
+        sys.exit(-1)
+        self.__field_list = self.__field_list.append(field)
     def addMethod(self, body_decl):
         self.__method_list.append(body_decl.getMethod())
     def addCtor(self, body_decl):
@@ -361,6 +363,13 @@ class cls_body_decl_list:
     def getFieldList(self):return self.__field_list
     def getMethodList(self):return self.__method_list
     def getCtorList(self):return self.__ctor_list#TODO: probably not allow more than one ctor
+
+    def findFieldByName(self, fieldName): # detect whether there is a field with the same name
+        for field in self.__field_list:
+            if field.getFieldName() == fieldName:
+                return True
+        return False
+
 
 
 """Below are statements related classes ############################################"""
@@ -699,8 +708,17 @@ class args_plus_cls(): # Expr, Expr , ..., Expr
     def getArgsList(self):
         return self.__args_list
 
+# class ClassNameDuplicationException(Exception):
+#     def __init__ (self, clsName):
+#         self.__clsName = clsName
+#         print self.__clsName
 
+# class FieldNameDuplicationException(Exception):
+#     def __init__ (self, fieldName):
+#         self.__fieldName = fieldName
 
-
+# class VariableNameDuplicationException(Exception):
+#     def __init__ (self, varName):
+#         self.__varName = varName
 
 
