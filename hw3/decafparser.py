@@ -533,15 +533,29 @@ def p_error(p):
 parser = yacc.yacc()
 
 def from_file(filename):
+    global preinit
     try:
         with open(filename, "rU") as f:
             init()
-            parser.parse(f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=None)
+            parser.parse(preinit+f.read(), lexer=lex.lex(module=decaflexer), tracking=True, debug=None)
         return not decaflexer.errorflag
     except IOError as e:
         print "I/O error: %s: %s" % (filename, e.strerror)
 
 
+preinit ="""
+class In{
+    public static int scan_int(){}
+    public static float scan_float(){}
+}
+
+class Out{
+    public static void print(int i){}
+    public static void print(float f){}
+    public static void print(boolean b){}
+    public static void print(string s){}
+}
+"""
 if __name__ == "__main__" :
     f = open(sys.argv[1], "r")
     logging.basicConfig(
@@ -554,3 +568,5 @@ if __name__ == "__main__" :
         print("Parse succeed")
     else:
         print("Parse failed")
+
+
