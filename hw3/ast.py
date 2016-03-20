@@ -62,9 +62,14 @@ class MethodRecord:
 
     def Print(self):
         print 'METHOD: '+str(self.__methId)+', '+self.__methName+', '+self.__containingCls+', '+self.__methVis+', '+self.__methApp+', '+self.__retType
-        print 'Method parameters:'
+        print 'Method parameters:',
+        start = 0
+        end = len(self.__methParams)
         for id in self.__methParams:
-            print str(id) + ', ',
+            print str(id.getVarId()),
+            if(start < end -1):
+                print ",",
+        print ''
         print 'Variable Table: '
         for varRec in self.__varTab.getVarTable():
             varRec.Print()
@@ -597,19 +602,19 @@ class MethodInvExpr(Expr):
         print ",",
 
         print self.__methNameStr+",",
+        print '[',
         printCommaSepaExprs(self.__args.getArgsList())
+        print ']',
         print ")",
 
 def printCommaSepaExprs(expr_list):
     start = 0
     end = len(expr_list)
-    print '[',
     for expr in expr_list:
         expr.Print()
         if start < end - 1:
             print ",",
         start+=1
-    print ']',
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange, baseClsName, args):
@@ -619,7 +624,9 @@ class NewObjExpr(Expr):
     def Print(self):
         print "New-object(",
         print self.__baseClsName+",",
+        print '[',
         printCommaSepaExprs(self.__args.getArgsList())
+        print ']',
         print ")",
 
 class ThisExpr(Expr):
