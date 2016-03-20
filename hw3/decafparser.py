@@ -38,8 +38,8 @@ def p_pgm(p):
     'pgm : class_decl_list'
 
 def p_class_decl_list_nonempty(p):
-    'class_decl_list : class_decl class_decl_list'
-    ast.ClassTable.ClassRecords.append(p[1])
+    'class_decl_list : class_decl_list class_decl '
+    ast.ClassTable.ClassRecords.append(p[2])
 def p_class_decl_list_empty(p):
     'class_decl_list : '
     pass
@@ -146,7 +146,6 @@ def p_constructor_decl(p):
     global curVarTable
     p[0] = ast.CtorRecord(p[1].getVis(), p[4].getAllFormalsOrLocals('Formal'), curVarTable, p[6])
 
-
 def p_mod(p):
     'mod : visibility_mod storage_mod'
     p[0] = ast.mod_cls(p[1], p[2])
@@ -185,7 +184,7 @@ def p_type_float(p):
     p[0] = p[1]
 def p_type_id(p):
     'type :  ID'
-    p[0] = p[1]
+    p[0] = 'user(' + p[1] + ')'
 
 #For var_decl->field_decl->class_body_decl->class_body_decl_list
 #            ->stmt
@@ -410,7 +409,7 @@ def p_field_access_id(p):
     if curClass == p[1]: # if current class
         p[0] = ast.ClsRefExpr(p.linespan(1), curClass)
         return
-    record = ast.ClassTable.findRecordById(p[1])
+    record = ast.ClassTable.findRecordByName(p[1])
     if record: # if previoud class
         p[0] = ast.ClsRefExpr(p.linespan(1), record.getClsName()) # record: ClassRecord
         return

@@ -11,8 +11,8 @@ class ClassRecord:
     def getClsName(self): return self.__clsName
 
     def Print(self):
-        print 'Class Name: ', self.__clsName
-        print 'Super Class Name: ', self.__superClsName
+        print 'Class Name: ' + self.__clsName
+        print 'Super Class Name: ' + self.__superClsName
         print 'Fields: '
         for item in self.__fields:
             item.Print()
@@ -36,11 +36,11 @@ class CtorRecord:
 
     def Print(self):
         print 'CONSTRUCTOR: ' + str(self.__ctorId) + ',' + self.__Vis
-        print 'Constructor parameters:',
+        print 'Constructor parameters:'
         for id in self.__ctorParams:
             print str(id) + ', ',
         print 'Variable Table: '
-        for varRec in self.__varTab:
+        for varRec in self.__varTab.getVarTable():
             varRec.Print()
         print 'Constructor Body: '
         self.__ctorBody.Print()
@@ -62,7 +62,7 @@ class MethodRecord:
 
     def Print(self):
         print 'METHOD: '+str(self.__methId)+', '+self.__methName+', '+self.__containingCls+', '+self.__methVis+', '+self.__methApp+', '+self.__retType
-        print 'Method parameters:',
+        print 'Method parameters:'
         for id in self.__methParams:
             print str(id) + ', ',
         print 'Variable Table: '
@@ -77,9 +77,9 @@ class ClassTable:
     ClassRecords = []
 
     @staticmethod
-    def findRecordById(Id): # search id in a scope descendent manner, return the closest match
+    def findRecordByName(Id): # search id in a scope descendent manner, return the closest match
         for rec in ClassTable.ClassRecords:
-            if rec.getVarId() == Id:
+            if rec.getClsName() == Id:
                 return rec
         return None
 
@@ -98,9 +98,8 @@ class CtorTable:
 
     @staticmethod
     def assignId(): # Id starts from 1
-        ret = CtorTable.CurCtorId
         CtorTable.CurCtorId += 1
-        return ret
+        return CtorTable.CurCtorId
 
 #TODO: we probably dont need a global method table
 class MethodTable:
@@ -110,9 +109,8 @@ class MethodTable:
 
     @staticmethod
     def assignId(): # Id starts from 1
-        ret = MethodTable.CurMethodId
         MethodTable.CurMethodId += 1
-        return ret
+        return MethodTable.CurMethodId
     @staticmethod
     def addMethodToGlobMethodTab(methodrec):
         MethodTable.MethodRecords.append(methodrec)
@@ -125,9 +123,8 @@ class FieldTable:
 
     @staticmethod
     def assignId(): # Id starts from 1
-        ret = FieldTable.CurFieldId
         FieldTable.CurFieldId += 1
-        return ret
+        return FieldTable.CurFieldId
 
     @staticmethod
     def addFieldToGlobFieldTab(field):
@@ -323,7 +320,7 @@ class cls_body_decl:
         self.__flag = "method"
     def addCtor(self, ctor_rec):
         self.__ctor = ctor_rec
-        self.flag = "ctor"
+        self.__flag = "ctor"
 
     def getFieldList(self):return self.__field_list
     def getMethod(self):return self.__method
