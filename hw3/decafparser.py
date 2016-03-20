@@ -241,7 +241,7 @@ def p_param(p):
     'param : type var'
     p[2].setType(p[1])
     p[2].setLocOrFormal('Formal')
-    p[0] = ast.VariableRecord(p[2], 'formal', scope = 0)
+    p[0] = ast.VariableRecord(p[2], 'Formal', scope = 0)
 
 
 # Statements
@@ -369,7 +369,6 @@ def p_args_opt_empty(p):
 def p_args_plus(p):
     'arg_plus : arg_plus COMMA expr'
     p[1].addArgs(p[3])
-    p[1].setLinenoRange(p.linespan(0))
     p[0] = p[1]
 def p_args_single(p):
     'arg_plus : expr'
@@ -394,18 +393,17 @@ def p_field_access_dot(p):
 def p_field_access_id(p):
     'field_access : ID'
     # if field_access
-    global curClass
+    global curClass, curVarTable, curScope
     if ast.FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
         p[0] = ast.VarExpr(ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1]))
         return
     # if variable_access
-    global curVarTable, curScope
-    record = curVarTable.findRecordById(p[1], curScope)
+
+    record = curVarTable.findRecordByName(p[1], curScope)
     if record:
         p[0] = ast.VarExpr(record, p.linespan(0)) # record: VariableRecord
         return
     # if class_reference
-    global curClass
     if curClass == p[1]: # if current class
         p[0] = ast.ClsRefExpr(p.linespan(1), curClass)
         return

@@ -171,6 +171,9 @@ class VariableRecord:
     def getScope(self):
         return self.__scope
 
+    def getVarName(self):
+        return self.__varName
+
     def Print(self):
         print 'VARIABLE ' + str(self.__varId) + ', ' + self.__varName + ', ' + self.__varKind + ', ',
         self.__varType.Print()
@@ -211,11 +214,11 @@ class VariableTable:
                  ret.append(var)
         return ret # list of all formal or local var_records
 
-    def findRecordById(self, Id, curScope): # search id in a scope descendent manner, return the closest match
+    def findRecordByName(self, Name, curScope): # search id in a scope descendent manner, return the closest match
         i = curScope
         while i >= 0:
             for rec in self.__varTable:
-                if rec.getVarId() == Id and rec.getScope() == i:
+                if rec.getVarName() == Name and rec.getScope() == i:
                     return rec
             i -= 1
         return None
@@ -600,11 +603,13 @@ class MethodInvExpr(Expr):
 def printCommaSepaExprs(expr_list):
     start = 0
     end = len(expr_list)
+    print '[',
     for expr in expr_list:
         expr.Print()
-        if start < end:
+        if start < end - 1:
             print ",",
         start+=1
+    print ']',
 
 class NewObjExpr(Expr):
     def __init__(self, linenoRange, baseClsName, args):
