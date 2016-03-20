@@ -647,7 +647,7 @@ class ClsRefExpr(Expr):
         super(ClsRefExpr, self).__init__(linenoRange)
     def Print(self):
         print "Class-reference(",
-        print self.className
+        print self.__className,
         print ")",
 
 class ArryAccExpr(Expr):
