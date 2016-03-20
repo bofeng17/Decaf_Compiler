@@ -133,9 +133,9 @@ class FieldTable:
         return FieldTable.CurFieldId
 
     @staticmethod
-    def findFieldById(Id, curClass):
+    def findFieldByName(Name, curClass):
         for fr in FieldTable.FieldRecords:
-            if (fr.getFieldId() == Id) and (fr.getContainingCls() == curClass):
+            if (fr.getFieldName() == Name) and (fr.getContainingCls() == curClass):
                 return True
         return False
 

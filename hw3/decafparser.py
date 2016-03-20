@@ -109,6 +109,7 @@ def p_field_decl(p):
     for var in p[2].getVarList():
         global curClass
         tmp_field_rec = ast.FieldRecord(p[1] ,var, curClass)
+        ast.FieldTable.FieldRecords.append(tmp_field_rec)
         new_field_list.addField(tmp_field_rec)
     p[0] = new_field_list
 
@@ -398,8 +399,8 @@ def p_field_access_id(p):
     'field_access : ID'
     # if field_access
     global curClass, curVarTable, curScope
-    if ast.FieldTable.findFieldById(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
-        p[0] = ast.VarExpr(ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1]))
+    if ast.FieldTable.findFieldByName(p[1], curClass): # curClass: global varible, set by class_decl and accessed by field_decl, field_access
+        p[0] = ast.FieldAccExpr(p.linespan(0), ast.ThisExpr(p.linespan(1)), p[1])
         return
     # if variable_access
 
