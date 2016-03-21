@@ -147,7 +147,11 @@ def p_method_decl_nonvoid(p):
 #app: static or instance
 def p_constructor_decl(p):
     'constructor_decl : mod ID LPAREN param_list_opt RPAREN block'
-    global curVarTable
+    global curVarTable, curClass
+    if p[2] != curClass:
+        print 'ConstructorNameIsNotSameWithClassName Error for Constructor "' + p[2] + '" at lineno ',
+        ast.PrintLineNo(p.linespan(2)[0])
+        sys.exit(-1)
     p[0] = ast.CtorRecord(p[1].getVis(), p[4].getAllFormalsOrLocals('Formal'), curVarTable, p[6])
 
 def p_mod(p):
