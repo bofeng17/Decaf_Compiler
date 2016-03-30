@@ -201,8 +201,8 @@ class VarTable:
     def __init__(self):
         self.vars = {0:{}}
         self.lastvar = 0
-        self.lastblock = 0
-        self.levels = [0]
+        self.lastblock = 0 # unique block "id" in current VarTable
+        self.levels = [0] # stack, [curBlckId, ..., topLevBlckId(i.e.0)]
 
     def enter_block(self):
         self.lastblock += 1

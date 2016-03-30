@@ -17,8 +17,8 @@ precedence = (
     ('left', 'MULTIPLY', 'DIVIDE'),
     ('right', 'NOT'),
     ('right', 'UMINUS'),
-    ('right', 'ELSE'),
     ('right', 'RPAREN'),
+    ('right', 'ELSE'), # TODO: nee to verify
 )
 
 binops = {'+':'add',
@@ -205,11 +205,11 @@ def p_type_id(p):
     baseclass = ast.lookup(ast.classtable, p[1])
     if (baseclass == None):
         signal_error('Class {0} does not exist!'.format(p[1]), p.lineno(1))
-    current_type = ast.Type(baseclass)
+    current_type = ast.Type(baseclass) # TODO: baseclass.name instead of baseclass
 
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
-    p[0] = p[1] + [p[2]]
+    p[0] = p[1] + [p[3]]
 def p_var_list_single(p):
     'var_list : var'
     p[0] = [p[1]]
@@ -296,7 +296,7 @@ def p_stmt_if_noelse(p):
     p[0] = ast.IfStmt(p[3], p[5], ast.SkipStmt(None), p.lineno(1))
 def p_stmt_while(p):
     'stmt : WHILE LPAREN expr RPAREN stmt'
-    p[0] = ast.WhileStmt(p[3], p[5], p[7], p.lineno(1))
+    p[0] = ast.WhileStmt(p[3], p[5], p.lineno(1))
 def p_stmt_for(p):
     'stmt : FOR LPAREN stmt_expr_opt SEMICOLON expr_opt SEMICOLON stmt_expr_opt RPAREN stmt'
     p[0] = ast.ForStmt(p[3], p[5], p[7], p[9], p.lineno(1))
@@ -320,12 +320,12 @@ def p_stmt_var_decl(p):
     p[0] = None
 def p_stmt_empty(p):
     'stmt : SEMICOLON'
-    p[0] = None
+    p[0] = ast.SkipStmt(p.lineno(1))
 def p_stmt_error(p):
     'stmt : error SEMICOLON'
     signal_error("Invalid statement", p.lineno(2))
     decaflexer.errorflag = True
-    p[0] = None
+    p[0] = ast.SkipStmt(p.lineno(1))
 
 # Expressions
 def p_literal_int_const(p):
