@@ -144,7 +144,7 @@ def p_constructor_decl(p):
     'constructor_decl : constructor_header LPAREN param_list_opt RPAREN block'
     c = p[1]
     c.update_body(p[5])
-    
+
 def p_constructor_header(p):
     'constructor_header : mod ID'
     global current_context, current_vartable
@@ -205,7 +205,7 @@ def p_type_id(p):
     baseclass = ast.lookup(ast.classtable, p[1])
     if (baseclass == None):
         signal_error('Class {0} does not exist!'.format(p[1]), p.lineno(1))
-    current_type = ast.Type(baseclass) # TODO: baseclass.name instead of baseclass
+    current_type = ast.Type(baseclass.name)
 
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
@@ -275,12 +275,12 @@ def p_block_begin(p):
     'block_begin : '
     global current_vartable
     current_vartable.enter_block()
-    
+
 def p_block_end(p):
     'block_end : '
     global current_vartable
     current_vartable.leave_block()
-    
+
 def p_stmt_list_empty(p):
     'stmt_list : '
     p[0] = []
@@ -296,7 +296,7 @@ def p_stmt_if_noelse(p):
     p[0] = ast.IfStmt(p[3], p[5], ast.SkipStmt(None), p.lineno(1))
 def p_stmt_while(p):
     'stmt : WHILE LPAREN expr RPAREN stmt'
-    p[0] = ast.WhileStmt(p[3], p[5], p.lineno(1))
+    p[0] = ast.WhileStmt(p[3], p[5], p[7], p.lineno(1))
 def p_stmt_for(p):
     'stmt : FOR LPAREN stmt_expr_opt SEMICOLON expr_opt SEMICOLON stmt_expr_opt RPAREN stmt'
     p[0] = ast.ForStmt(p[3], p[5], p[7], p[9], p.lineno(1))
@@ -317,7 +317,7 @@ def p_stmt_block(p):
     p[0] = p[1]
 def p_stmt_var_decl(p):
     'stmt : var_decl'
-    p[0] = None
+    p[0] = ast.SkipStmt(None)
 def p_stmt_empty(p):
     'stmt : SEMICOLON'
     p[0] = ast.SkipStmt(p.lineno(1))
@@ -325,7 +325,7 @@ def p_stmt_error(p):
     'stmt : error SEMICOLON'
     signal_error("Invalid statement", p.lineno(2))
     decaflexer.errorflag = True
-    p[0] = ast.SkipStmt(p.lineno(1))
+    p[0] = ast.SkipStmt(p.lineno(2))
 
 # Expressions
 def p_literal_int_const(p):
@@ -367,7 +367,7 @@ def p_primary_newobj(p):
         p[0] = ast.NewObjectExpr(c, p[4], p.lineno(1))
     else:
         signal_error('Class "{0}" in "new" not defined (yet?)'.format(cname), p.lineno(2))
-        
+
 def p_primary_lhs(p):
     'primary : lhs'
     p[0] = p[1]
@@ -477,8 +477,8 @@ def p_assign_pre_dec(p):
 
 def p_new_array(p):
     'new_array : NEW type dim_expr_plus dim_star'
-    t = ast.Type(p[2], params=p[4])
-    p[0] = ast.NewArray(t, p[3])
+    t = ast.Type(p[2], params=p[4]) # TODO: didn't consider dim_expr_plus in type
+    p[0] = ast.NewArrayExpr(t, p[3], p.lineno(1))
 
 def p_dim_expr_plus(p):
     'dim_expr_plus : dim_expr_plus dim_expr'
@@ -515,7 +515,7 @@ def p_expr_opt(p):
     p[0] = p[1]
 def p_expr_empty(p):
     'expr_opt : '
-    p[0] = None
+    p[0] = None # TODO: SkipExpr may be better
 
 
 def p_error(p):
@@ -529,7 +529,7 @@ parser = yacc.yacc()
 def signal_error(string, lineno):
     print "{1}: {0}".format(string, lineno)
     decaflexer.errorflag = True
-    
+
 def from_file(filename):
     try:
         with open(filename, "rU") as f:

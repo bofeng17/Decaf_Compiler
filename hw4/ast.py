@@ -110,6 +110,9 @@ class Type:
             if (basetype in ['int', 'boolean', 'float', 'string', 'void']):
                 self.kind = 'basic'
                 self.typename = basetype
+            elif (isinstance(basetype, Type)):
+                self.kind = basetype.kind
+                self.typename = basetype.typename
             else:
                 self.kind = 'class'
                 self.typename = basetype
@@ -156,7 +159,7 @@ class Method:
         self.storage = storage
         self.rtype = rtype
         self.vars = VarTable()
-        
+
     def update_body(self, body):
         self.body = body
 
@@ -170,7 +173,7 @@ class Method:
         self.vars.printout()
         print "Method Body:"
         self.body.printout()
-        
+
 class Constructor:
     """A class encoding constructors and their attributes in Decaf"""
     def __init__(self, cname, visibility):
@@ -180,7 +183,7 @@ class Constructor:
         self.id = lastconstructor
         self.visibility = visibility
         self.vars = VarTable()
-        
+
     def update_body(self, body):
         self.body = body
 
@@ -194,7 +197,7 @@ class Constructor:
         self.vars.printout()
         print "Constructor Body:"
         self.body.printout()
-        
+
 
 class VarTable:
     """ Table of variables in each method/constructor"""
@@ -219,7 +222,7 @@ class VarTable:
         v = Variable(vname, self.lastvar, vkind, vtype)
         vbl = self.vars[c]  # list of variables in current block
         vbl[vname] = v
-    
+
     def _find_in_block(self, vname, b):
         if (b in self.vars):
             # block exists
@@ -250,7 +253,7 @@ class VarTable:
             for vname in self.vars[b]:
                 v = self.vars[b][vname]
                 v.printout()
-        
+
 
 class Variable:
     """ Record for a single variable"""
@@ -262,23 +265,17 @@ class Variable:
 
     def printout(self):
         print "VARIABLE {0}, {1}, {2}, {3}".format(self.id, self.name, self.kind, self.type)
-    
 
-class Stmt(object): 
+
+class Stmt(object):
     """ Top-level (abstract) class representing all statements"""
 
 class IfStmt(Stmt):
     def __init__(self, condition, thenpart, elsepart, lines):
         self.lines = lines
         self.condition = condition
-        if thenpart == None:
-            self.thenpart = SkipStmt(lines)
-        else:
-            self.thenpart = thenpart
-        if elsepart == None:
-            self.elsepart = SkipStmt(lines)
-        else:
-            self.elsepart = elsepart
+        self.thenpart = thenpart
+        self.elsepart = elsepart
 
     def printout(self):
         print "If(",
@@ -293,10 +290,7 @@ class WhileStmt(Stmt):
     def __init__(self, cond, body, lines):
         self.lines = lines
         self.cond = cond
-        if (body == None):
-            self.body = SkipStmt(lines)
-        else:
-            self.body = body
+        self.body = body
 
     def printout(self):
         print "While(",
@@ -311,10 +305,7 @@ class ForStmt(Stmt):
         self.init = init
         self.cond = cond
         self.update = update
-        if (body == None):
-            self.body = SkipStmt(lines)
-        else:
-            self.body = body
+        self.body = body
 
     def printout(self):
         print "For(",
@@ -344,7 +335,7 @@ class ReturnStmt(Stmt):
 class BlockStmt(Stmt):
     def __init__(self, stmtlist, lines):
         self.lines = lines
-        self.stmtlist = [s for s in stmtlist if s != None]
+        self.stmtlist = [s for s in stmtlist if (s != None) and (not isinstance(s, SkipStmt))]
 
     def printout(self):
         print "Block(["
