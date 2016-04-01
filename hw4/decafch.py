@@ -38,6 +38,7 @@ def main(argv=None):
         infile = filename + ".decaf"
         ast.initialize_ast()
         if decafparser.from_file(infile):
+            ast.trav_ast()
             ast.print_ast()            
         else:
             print "Failure: there were errors."
