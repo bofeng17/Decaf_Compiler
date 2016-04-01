@@ -121,8 +121,10 @@ def p_method_decl(p):
     'method_decl : method_header LPAREN param_list_opt RPAREN block'
     global current_typesign
     m = p[1]
-    m.update_formal_type(current_typesign) # set Method.type as arrow Type--[tutple Type, retval Type]
+    m.update_formal_type(ast.Type(current_typesign, 'tuple')) # set Method.type as arrow Type--[tutple Type, retval Type]
     m.update_body(p[5])
+    # TODO: check if formal_sign conflicts before add_method
+    current_class.add_method(m)
 
 def p_method_decl_header_void(p):
     'method_header : mod VOID ID'
@@ -131,7 +133,6 @@ def p_method_decl_header_void(p):
     current_typesign = []
     (v, s) = current_modifiers
     current_method = ast.Method(p[3], current_class, v, s, ast.Type('void'))
-    current_class.add_method(current_method)
     current_vartable = current_method.vars
     p[0] = current_method
 
@@ -142,7 +143,6 @@ def p_method_decl_header_nonvoid(p):
     current_typesign = []
     (v, s) = current_modifiers
     current_method = ast.Method(p[3], current_class, v, s, current_type)
-    current_class.add_method(current_method)
     current_vartable = current_method.vars
     p[0] = current_method
 
@@ -150,8 +150,10 @@ def p_constructor_decl(p):
     'constructor_decl : constructor_header LPAREN param_list_opt RPAREN block'
     global current_typesign
     c = p[1]
-    c.update_formal_type(current_typesign) # set Ctor.type as tuple Type
+    c.update_formal_type(ast.Type(current_typesign, 'tuple')) # set Ctor.type as tuple Type
     c.update_body(p[5])
+    # TODO: check if formal_sign conflicts before add_constructor
+    current_class.add_constructor(c)
 
 def p_constructor_header(p):
     'constructor_header : mod ID'
@@ -162,7 +164,6 @@ def p_constructor_header(p):
     c = ast.Constructor(p[2], v)
     current_method = c
     # note: 's' is ignored.  should we signal error for s?
-    current_class.add_constructor(c)
     current_vartable = c.vars
     p[0] = c
 
@@ -269,11 +270,8 @@ def p_params_begin(p):
 
 def p_params_end(p):
     'params_end : '
-    global current_variable_kind, current_vartable
+    global current_variable_kind
     current_variable_kind = 'local'
-
-    # generate Type signature of current method
-
 
 # Statements
 
@@ -428,7 +426,7 @@ def p_field_access_id(p):
         c = ast.lookup(ast.classtable, vname)
         if (c != None):
             # there is a class with this name
-            p[0] = ast.ClassReferenceExpr(c, p.lineno(1)) # TODO: type
+            p[0] = ast.ClassReferenceExpr(c, p.lineno(1))
         else:
             # reference to a non-local var; assume field
             p[0] = ast.FieldAccessExpr(ast.ThisExpr(current_class, p.lineno(1)), vname, current_class, p.lineno(1))

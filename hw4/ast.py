@@ -12,6 +12,11 @@ def lookup(table, key):
 def addtotable(table, key, value):
     table[key] = value # the order in dict differs than that in list
 
+def trav_ast():
+    for cid in classtable:
+        c = classtable[cid]
+        c.trav()
+    print "-----------------------------------------------------------------------------"
 
 def print_ast():
     for cid in classtable:
@@ -19,11 +24,6 @@ def print_ast():
         c.printout()
     print "-----------------------------------------------------------------------------"
 
-def trav_ast():
-    for cid in classtable:
-        c = classtable[cid]
-        c.trav()
-    print "-----------------------------------------------------------------------------"
 
 def initialize_ast():
     # define In class:
@@ -33,29 +33,35 @@ def initialize_ast():
     cout.builtin = True     # this, too, is a builtin class
 
     scanint = Method('scan_int', cin, 'public', 'static', Type('int'))
+    scanint.update_formal_type(Type([], 'tuple'))
     scanint.update_body(SkipStmt(None))    # No line number information for the empty body
     cin.add_method(scanint)
 
     scanfloat = Method('scan_float', cin, 'public', 'static', Type('float'))
+    scanfloat.update_formal_type(Type([], 'tuple'))
     scanfloat.update_body(SkipStmt(None))    # No line number information for the empty body
     cin.add_method(scanfloat)
 
     printint = Method('print', cout, 'public', 'static', Type('void'))
+    printint.update_formal_type(Type([Type('int')], 'tuple'))
     printint.update_body(SkipStmt(None))    # No line number information for the empty body
     printint.add_var('i', 'formal', Type('int'))   # single integer formal parameter
     cout.add_method(printint)
 
     printfloat = Method('print', cout, 'public', 'static', Type('void'))
+    printfloat.update_formal_type(Type([Type('float')], 'tuple'))
     printfloat.update_body(SkipStmt(None))    # No line number information for the empty body
     printfloat.add_var('f', 'formal', Type('float'))   # single float formal parameter
     cout.add_method(printfloat)
 
     printboolean = Method('print', cout, 'public', 'static', Type('void'))
+    printboolean.update_formal_type(Type([Type('boolean')], 'tuple'))
     printboolean.update_body(SkipStmt(None))    # No line number information for the empty body
     printboolean.add_var('b', 'formal', Type('boolean'))   # single boolean formal parameter
     cout.add_method(printboolean)
 
     printstring = Method('print', cout, 'public', 'static', Type('void'))
+    printstring.update_formal_type(Type([Type('string')], 'tuple'))
     printstring.update_body(SkipStmt(None))    # No line number information for the empty body
     printstring.add_var('b', 'formal', Type('string'))   # single string formal parameter
     cout.add_method(printstring)
@@ -77,10 +83,8 @@ class Class:
     def trav(self):
         for f in self.fields:
             (self.fields[f]).trav()
-        print "Constructors:"
         for k in self.constructors:
             k.trav()
-        print "Methods:"
         for m in self.methods:
             m.trav()
 
@@ -138,7 +142,7 @@ class Type:
                 self.kind = basetype.kind
                 self.typename = basetype.typename
             else:
-                print "Undefined type!"
+                print "Undefined type"
         else:
             # Array type
             bt = Type(basetype, params=params-1)
@@ -239,7 +243,7 @@ class Method:
         self.vars = VarTable()
 
     def update_formal_type(self, formal_sign): # formal_sgin: tuple Type for formal_sign
-        self.formal_type = Type(formal_sign)
+        self.formal_type = formal_sign
 
     def update_body(self, body):
         self.body = body
@@ -778,7 +782,7 @@ class MethodInvocationExpr(Expr):
             for method in cls.methods:
                 if self.mname == method.name and storage == method.storage and \
                         (method.visibility == 'public' or cls == self.containing_cls):
-                    (is_sub, total_diff) = Type.is_subtype(param_sign, method)
+                    (is_sub, total_diff) = Type.is_subtype(param_sign, method.formal_type)
                     if is_sub:
                         found = True
                         if total_diff < min_diff:
@@ -828,7 +832,7 @@ class NewObjectExpr(Expr):
         while cls is not None:
             for ctor in cls.constructors:
                 if ctor.visibility == 'public' or cls == self.containing_cls:
-                    (is_sub, total_diff) = Type.is_subtype(param_sign, ctor)
+                    (is_sub, total_diff) = Type.is_subtype(param_sign, ctor.formal_type)
                     if is_sub:
                         found = True
                         if total_diff < min_diff:
