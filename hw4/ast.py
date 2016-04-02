@@ -727,7 +727,6 @@ class FieldAccessExpr(Expr):
         return False
 
     def trav(self):
-        # TODO: really need explicit traverse for self.base?
         self.base.trav()
 
         if isinstance(self.base, FieldAccessExpr):
@@ -737,7 +736,7 @@ class FieldAccessExpr(Expr):
             # leave self.type unresolved because it may be real Field access or method_invocation
             if not self.base.resolve_name():
                 # self.type is already set if self.resolve_name() is True
-                self.type = Type('error')
+                self.base.type = Type('error')
 
     def __repr__(self):
         return "Field-access({0}, {1}, {2})".format(self.base, self.fname, self.field_id)
@@ -757,7 +756,7 @@ class MethodInvocationExpr(Expr):
         param_type = []
         for arg in self.args:
             param_type.append(arg.type)
-        param_sign = Type(param_type) # signature of param passed into
+        param_sign = Type(param_type, 'tuple') # signature of param passed into
 
         # find start class for searching, and set storage
         storage = 'instance'
@@ -823,7 +822,7 @@ class NewObjectExpr(Expr):
         param_type = []
         for arg in self.args:
             param_type.append(arg.type)
-        param_sign = Type(param_type) # signature of param passed into
+        param_sign = Type(param_type,'tuple') # signature of param passed into
 
         # find candidate and test it
         cls = self.classref
@@ -846,7 +845,7 @@ class NewObjectExpr(Expr):
 
     def trav(self):
         # must firstly decorate subtree of self.args with type info
-        self.args.trav()
+        self.args.trav()#TODO
 
         # then do name resolution with type info of self.args
         if not self.resolve_name():
