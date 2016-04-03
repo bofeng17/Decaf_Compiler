@@ -1,0 +1,86 @@
+class A {
+    int x;
+    public A () {
+        this.x = 0;
+    }
+    public int f() {
+        return this.x + 1;
+    }
+    public int g() {
+        int i;
+        i = this.f();
+        i++;
+        return i;
+    }
+}
+
+class B extends A {
+    int y;
+    public A s;
+    B () {
+        this.y = 2;
+        this.s = new A();
+    }
+    public int f(int k) {
+        return super.f() + k;
+    }
+
+}
+
+
+class a {
+    int f(int u) {
+        int t[][];
+        t = new int[u][u];
+
+    }
+    int x(int u) {
+        int t[];
+        t = new int[u];
+        return t[10];
+
+    }
+    int g(int u) {
+        int t[][][];
+        t = new int[u][u][];
+    }
+}
+
+class nrfib{
+    public static void main() {
+        int n, i, fn, fn_prev;
+
+        n = In.scan_int();
+
+        fn = 1;
+        fn_prev = 0;
+        for(i=1;i<n;i=i+1) {
+            fn = fn_prev + fn;
+            fn_prev = fn - fn_prev;
+
+        }
+        Out.print("Fib = ");
+        Out.print(fn);
+        Out.print("\n");
+
+    }
+    void main() {
+      int arr[][][];
+      int in[];
+
+      arr = new int[10][][];
+      arr[5] = new int[1][];
+
+
+      in = new int[9][];
+      arr[5][0] = in;
+     
+      arr[5][0][8] = 234;
+      arr[5][0][0] = 0;
+
+      Out.print(arr[4+1][arr[5][0][0]][8], arr[5][0].length(), in.length());
+    }
+}
+
+
+

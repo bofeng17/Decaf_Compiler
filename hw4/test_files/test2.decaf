@@ -1,0 +1,44 @@
+class A {
+   public int x;
+   A () {
+     this.x = 0;
+   }
+}
+
+class B extends A {
+   int y;
+   B () {
+     super.x = 2;
+     this.y = 0;
+   }
+   private int D(){
+    return super.x*13;
+   }
+   private int C (){
+    int a,b;
+    a = In.scan_int();
+    b = In.scan_int();
+    if (a > 3){
+        a = 4;
+    }else{
+      a = 5;
+    }
+    if (a > 3 && a < 100){
+        a = 9;
+    }else{
+        a = 10;
+    }
+    for(a = 1; a<100; a++){
+        a = a+2;
+    }
+    {
+        int a;
+        a = 10000;
+        b = 20000;
+        while(b>0){
+            b = b - D();
+        }
+    }
+
+   }
+}

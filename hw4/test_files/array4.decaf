@@ -1,0 +1,46 @@
+class Point {
+	int x;
+	int y;
+
+    public Point(){
+
+    }
+	public void Init(int xVal, int yVal) {
+	   x = xVal;
+	   y = yVal;
+	}
+ 	public void PrintSelf() {
+		Out.print("adsad\n");
+	}
+}
+
+class Rect {
+	Point corners[];
+
+    public Rect(){
+
+    }
+	void Init(int x, int y, int w, int h) {
+		corners = new Point[2];
+		corners[0] = new Point();
+		corners[0].Init(x, y); 
+		corners[1] = new Point();
+		corners[1].Init(x +w, y+h);
+	}
+ 	void PrintSelf() {
+		Out.print("{\n lower left = ");
+		corners[0].PrintSelf();
+		Out.print(" upper right = ");
+		corners[1].PrintSelf();
+    		Out.print("}\n"); 
+	}
+    void main()
+    {
+        Rect r;
+        r = new Rect();
+        r.Init(10, 10, 5, 28);
+        r.PrintSelf();
+    }
+}
+
+

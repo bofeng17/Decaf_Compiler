@@ -1,0 +1,7 @@
+class hello_world{
+    public static void main() {
+        Out.print("Hello World!\n");
+        int a; 
+        a = In.scan_int();
+    } 
+}

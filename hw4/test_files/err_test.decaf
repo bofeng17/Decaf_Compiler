@@ -1,0 +1,47 @@
+class hello_world{
+    public static void main() {
+        int lala;
+        lala=  5+-4;
+        this.abc++;
+    } 
+void main() {
+  Cow betsy;
+  Animal b;
+  if(b[2][3])
+    return b;
+  betsy.InitCow(5, null, true);
+  b = betsy;
+  b.GetMom();
+}
+
+}
+
+class Animal {
+  int height;
+  Animal mother;
+  void InitAnimal(int h, Animal mom) {
+    height = h;
+    mother = mom;
+  }
+
+  int GetHeight() {	
+    return height;
+  }
+
+  Animal GetMom() {
+    return mother;
+  }
+}
+
+class Cow extends Animal {
+  bool isSpotted;
+  void InitCow(int h, Animal m, bool spot) {
+    isSpotted = spot;
+    InitAnimal(h,m);
+    int lala;
+  }
+  bool IsSpottedCow() {
+    return isSpotted;
+  }
+}
+

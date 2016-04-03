@@ -1,0 +1,4 @@
+class IntList{
+
+    a[2];  
+}
