@@ -708,7 +708,7 @@ class FieldAccessExpr(Expr):
                 self.expr_type = self.resolved_field.type
                 return 'Correct'
             else:
-                on_error("Can't resolve field: {0}.{1}".format(base_type.typename,self.fname), self.lines)
+                on_error("Can't resolve field: {0}.{1} please check the visibility and storage types of intended field to call ".format(base_type.typename,self.fname), self.lines)
         self.expr_type = Type('error')
         return 'Wrong'
 
@@ -747,7 +747,7 @@ class MethodInvocationExpr(Expr):
                     self.expr_type = self.resolved_meth.rtype
                     return 'Correct'
                 else:
-                    on_error("Can't resolve method: {0}".format(self.mname), self.lines)
+                    on_error("Can't resolve method: {0}, please check the visibility and storage types of the intended method to call".format(self.mname), self.lines)
         self.expr_type = Type('error')
         return 'Wrong'
 
@@ -775,7 +775,7 @@ class NewObjectExpr(Expr):
                 self.expr_type = Type(target_cls.name, 'user')
                 return 'Correct'
             else:
-                on_error("Can't resolve CONSTRUCTOR for new object: {0}".format(self.classref.name), self.lines)
+                on_error("Can't resolve CONSTRUCTOR for new object: {0}, please check the visibility constructors ".format(self.classref.name), self.lines)
         self.expr_type = Type('error')
         return 'Wrong'
 
