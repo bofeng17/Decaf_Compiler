@@ -117,6 +117,7 @@ class Class:
 
     def checkMethods(self):
         typecheck.check_methods(self.methods)
+        typecheck.check_methods(self.constructors)
 
 
 

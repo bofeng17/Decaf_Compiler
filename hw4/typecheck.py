@@ -102,7 +102,7 @@ def check_methods(meths):
                 m_types = m.vars.get_params_types()
                 if(not (is_subtype_args(check_m_types, m_types, True) \
                         or is_subtype_args(m_types, check_m_types, True))):
-                    print "methods {0} ID {1} and {2} have conflict arg types".format(m.name, m.id, check_m.id)
+                    print "overloading methods [{0}] ID [{1}] and [{2}] have conflict arg types".format(m.name, m.id, check_m.id)
                     sys.exit(-1)
 
 
