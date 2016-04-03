@@ -1,0 +1,41 @@
+class C {
+  // should now throw any error
+  int f;
+
+  C() {
+
+  }
+  C(int k) {
+  
+  }
+  C(float k) {
+   
+  }
+  C(int k, float k) {
+
+  }
+
+  int f() {
+    return 0;
+  }
+  int f(int k) {
+    return 0;
+  }
+  int f(float k) {
+    return 0;
+  }
+  int f(int k, float k) {
+    return 0;
+  }
+}
+
+class D {
+  C c1 = new C();
+  C c2 = new C(1);
+  C c3 = new C(1.0);
+  C c4 = new C(1, 1.0);
+  c1.f()
+  c1.f(1);
+  c1.f(1.0);
+  c1.f(1, 1.0);
+}
