@@ -660,6 +660,8 @@ class AssignExpr(Expr):
             if(typecheck.is_subtype(self.rhs.expr_type, self.lhs.expr_type)):
                 self.expr_type = self.rhs.expr_type#TODO: verify there is no need to alloc a new type
                 return 'Correct'
+            else:
+                on_error("rhs's type:{0} is not a subtype of lhs's type:{1}".format(self.rhs.expr_type, self.lhs.expr_type), self.lines)
         self.expr_type = Type('error')
         return 'Wrong'
 
