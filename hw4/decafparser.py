@@ -17,8 +17,8 @@ precedence = (
     ('left', 'MULTIPLY', 'DIVIDE'),
     ('right', 'NOT'),
     ('right', 'UMINUS'),
+    ('right', 'ELSE'),
     ('right', 'RPAREN'),
-    ('right', 'ELSE'), # TODO: nee to verify
 )
 
 binops = {'+':'add',
@@ -40,13 +40,11 @@ def init():
 current_type = None
 current_context = None
 current_modifiers = None
-current_class = None # Class object
-current_method = None # Method object
+current_class = None
 current_vartable = None
 current_variable_kind = None
-current_typesign = None # list of Types, representing Type signature of formal_param of current method/ctor
 
-
+current_method = None#yh: for return_stmt checking
 ### DECAF Grammar
 
 # Top-level
@@ -119,51 +117,47 @@ def p_field_decl(p):
 
 def p_method_decl(p):
     'method_decl : method_header LPAREN param_list_opt RPAREN block'
-    global current_typesign
     m = p[1]
-    m.update_formal_type(ast.Type(current_typesign, 'tuple')) # set Method.type as arrow Type--[tutple Type, retval Type]
     m.update_body(p[5])
-    # TODO: check if formal_sign conflicts before add_method
-    current_class.add_method(m)
 
 def p_method_decl_header_void(p):
     'method_header : mod VOID ID'
-    global current_context, current_vartable, current_typesign, current_method
+    global current_context, current_vartable
+    global current_method
     current_context = 'method'
-    current_typesign = []
     (v, s) = current_modifiers
-    current_method = ast.Method(p[3], current_class, v, s, ast.Type('void'))
-    current_vartable = current_method.vars
-    p[0] = current_method
+    m = ast.Method(p[3], current_class, v, s, ast.Type('void'))
+    current_class.add_method(m)
+    current_vartable = m.vars
+    p[0] = m
+    current_method = p[0]
+
 
 def p_method_decl_header_nonvoid(p):
     'method_header : mod type ID'
-    global current_context, current_vartable, current_typesign, current_method
+    global current_context, current_vartable
+    global current_method
     current_context = 'method'
-    current_typesign = []
     (v, s) = current_modifiers
-    current_method = ast.Method(p[3], current_class, v, s, current_type)
-    current_vartable = current_method.vars
-    p[0] = current_method
+    m = ast.Method(p[3], current_class, v, s, current_type)
+    current_class.add_method(m)
+    current_vartable = m.vars
+    p[0] = m
+    current_method = p[0]
 
 def p_constructor_decl(p):
     'constructor_decl : constructor_header LPAREN param_list_opt RPAREN block'
-    global current_typesign
     c = p[1]
-    c.update_formal_type(ast.Type(current_typesign, 'tuple')) # set Ctor.type as tuple Type
     c.update_body(p[5])
-    # TODO: check if formal_sign conflicts before add_constructor
-    current_class.add_constructor(c)
 
 def p_constructor_header(p):
     'constructor_header : mod ID'
-    global current_context, current_vartable, current_typesign, current_method
+    global current_context, current_vartable
     current_context = 'method'
-    current_typesign = []
     (v, s) = current_modifiers
     c = ast.Constructor(p[2], v)
-    current_method = c
     # note: 's' is ignored.  should we signal error for s?
+    current_class.add_constructor(c)
     current_vartable = c.vars
     p[0] = c
 
@@ -214,20 +208,21 @@ def p_type_id(p):
     'type :  ID'
     global current_type
     baseclass = ast.lookup(ast.classtable, p[1])
-    if (baseclass == None):
+    if (baseclass is None):
         signal_error('Class {0} does not exist!'.format(p[1]), p.lineno(1))
-    p[0] = current_type = ast.Type(baseclass.name, kind='user') # user-defined type
+    else:
+        p[0] = current_type = ast.Type(baseclass.name)
 
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
-    p[0] = p[1] + [p[3]]
+    p[0] = p[1] + [p[2]]
 def p_var_list_single(p):
     'var_list : var'
     p[0] = [p[1]]
 
 def p_var_id(p):
     'var : ID dim_star'
-    global current_class, current_context, current_modifiers, current_type, current_typesign
+    global current_class, current_context, current_modifiers, current_type
     global current_vartable, current_variable_kind
     if (current_context == 'class'):
         if (current_class.lookup_field(p[1])):
@@ -260,10 +255,6 @@ def p_param_list_single(p):
 
 def p_param(p):
     'param : type var'
-    #TODO:
-    global current_typesign,current_type
-    current_typesign.append(ast.Type(current_type, params=p[2]))
-
     pass
 
 def p_params_begin(p):
@@ -318,7 +309,8 @@ def p_stmt_for(p):
 def p_stmt_return(p):
     'stmt : RETURN expr_opt SEMICOLON'
     global current_method
-    p[0] = ast.ReturnStmt(p[2], current_method, p.lineno(1))
+    p[0] = ast.ReturnStmt(p[2], p.lineno(1))
+    p[0].updateMethod(current_method)
 def p_stmt_stmt_expr(p):
     'stmt : stmt_expr SEMICOLON'
     p[0] = ast.ExprStmt(p[1], p.lineno(2))
@@ -333,7 +325,7 @@ def p_stmt_block(p):
     p[0] = p[1]
 def p_stmt_var_decl(p):
     'stmt : var_decl'
-    p[0] = ast.SkipStmt(None) # TODO: None(C.R. solution) or SkipStmt
+    p[0] = ast.SkipStmt(None)
 def p_stmt_empty(p):
     'stmt : SEMICOLON'
     p[0] = ast.SkipStmt(p.lineno(1))
@@ -369,11 +361,13 @@ def p_primary_literal(p):
 def p_primary_this(p):
     'primary : THIS'
     global current_class
-    p[0] = ast.ThisExpr(current_class, p.lineno(1))
+    p[0] = ast.ThisExpr(p.lineno(1))
+    p[0].updateClass(current_class)
 def p_primary_super(p):
     'primary : SUPER'
     global current_class
-    p[0] = ast.SuperExpr(current_class, p.lineno(1))
+    p[0] = ast.SuperExpr(p.lineno(1))
+    p[0].updateClass(current_class)
 def p_primary_paren(p):
     'primary : LPAREN expr RPAREN'
     p[0] = p[2]
@@ -383,7 +377,8 @@ def p_primary_newobj(p):
     cname = p[2]
     c = ast.lookup(ast.classtable, cname)
     if (c != None):
-        p[0] = ast.NewObjectExpr(c, p[4], current_class, p.lineno(1))
+        p[0] = ast.NewObjectExpr(c, p[4], p.lineno(1))
+        p[0].updateClass(current_class)
     else:
         signal_error('Class "{0}" in "new" not defined (yet?)'.format(cname), p.lineno(2))
 
@@ -416,15 +411,16 @@ def p_lhs(p):
 def p_field_access_dot(p):
     'field_access : primary DOT ID'
     global current_class
-    p[0] = ast.FieldAccessExpr(p[1], p[3], current_class, p.lineno(2))
+    p[0] = ast.FieldAccessExpr(p[1], p[3], p.lineno(2))
+    p[0].updateClass(current_class)#This expr refer to the containing class
 def p_field_access_id(p):
     'field_access : ID'
-    global current_class
+    global current_class, current_vartable
     vname = p[1]
-    v = current_vartable.find_in_scope(vname) # v: object of Variable
+    v = current_vartable.find_in_scope(vname)
     if (v != None):
         # local variable in current scope
-        p[0] = ast.VarExpr(v, p.lineno(1))  # v.type: object of Type
+        p[0] = ast.VarExpr(v, p.lineno(1))
     else:
         c = ast.lookup(ast.classtable, vname)
         if (c != None):
@@ -432,17 +428,21 @@ def p_field_access_id(p):
             p[0] = ast.ClassReferenceExpr(c, p.lineno(1))
         else:
             # reference to a non-local var; assume field
-            p[0] = ast.FieldAccessExpr(ast.ThisExpr(current_class, p.lineno(1)), vname, current_class, p.lineno(1))
+            thisexpr = ast.ThisExpr(p.lineno(1))
+            thisexpr.updateClass(current_class)
+            p[0] = ast.FieldAccessExpr(thisexpr, vname, p.lineno(1))
+            p[0].updateClass(current_class)#This expr refer to the current class
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
-    p[0] = ast.ArrayExpr(p[1], p[3], p.lineno(2))
+    p[0] = ast.ArrayAccessExpr(p[1], p[3], p.lineno(2))
 
 def p_method_invocation(p):
     'method_invocation : field_access LPAREN args_opt RPAREN'
     global current_class
     if (isinstance(p[1], ast.FieldAccessExpr)):
-        p[0] = ast.MethodInvocationExpr(p[1], p[3], current_class, p.lineno(2))
+        p[0] = ast.MethodInvocationExpr(p[1], p[3], p.lineno(2))
+        p[0].updateClass(current_class)#This expr refer to the current class
     else:
         # p[1] is a local variable or a class name
         if (isinstance(p[1], ast.VarExpr)):
@@ -499,8 +499,7 @@ def p_assign_pre_dec(p):
 
 def p_new_array(p):
     'new_array : NEW type dim_expr_plus dim_star'
-    total_dim = len(p[3]) + p[4]
-    t = ast.Type(p[2], params=total_dim)
+    t = ast.Type(p[2], params=p[4])
     p[0] = ast.NewArrayExpr(t, p[3], p.lineno(1))
 
 def p_dim_expr_plus(p):
@@ -538,7 +537,7 @@ def p_expr_opt(p):
     p[0] = p[1]
 def p_expr_empty(p):
     'expr_opt : '
-    p[0] = None # TODO: SkipExpr may be better
+    p[0] = None
 
 
 def p_error(p):
