@@ -1,13 +1,13 @@
 // should not throw any error
 
 class A {
-  A() {
+  public A() {
 
   }
 }
 
 class B extends A {
-  B() {
+  public B() {
 
   }
 }
@@ -16,18 +16,25 @@ class C extends B {
   C() {
 
   }
-  static void f(A a1, A a2) {
+  public static void f(A a1, A a2) {
 
   }
 }
 
 class D {
-  A a = new A();
-  B b = new B();
+  A a;
+  B b;
 
+  D(){
+    b = new B();
+    a = new A();
+  }
   // should all resolve successfully
-  C.f(a, a); 
-  C.f(a, b);
-  C.f(b, a); 
-  C.f(b, b);
+  void main(){
+      C.f(a, a); 
+      C.f(a, b);
+      C.f(b, a); 
+      C.f(b, b);
+
+  }
 }
