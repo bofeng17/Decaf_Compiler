@@ -44,7 +44,7 @@ current_class = None
 current_vartable = None
 current_variable_kind = None
 
-
+current_method = None#yh: for return_stmt checking
 ### DECAF Grammar
 
 # Top-level
@@ -123,28 +123,33 @@ def p_method_decl(p):
 def p_method_decl_header_void(p):
     'method_header : mod VOID ID'
     global current_context, current_vartable
+    global current_method
     current_context = 'method'
     (v, s) = current_modifiers
     m = ast.Method(p[3], current_class, v, s, ast.Type('void'))
     current_class.add_method(m)
     current_vartable = m.vars
     p[0] = m
+    current_method = p[0]
+
 
 def p_method_decl_header_nonvoid(p):
     'method_header : mod type ID'
     global current_context, current_vartable
+    global current_method
     current_context = 'method'
     (v, s) = current_modifiers
     m = ast.Method(p[3], current_class, v, s, current_type)
     current_class.add_method(m)
     current_vartable = m.vars
     p[0] = m
+    current_method = p[0]
 
 def p_constructor_decl(p):
     'constructor_decl : constructor_header LPAREN param_list_opt RPAREN block'
     c = p[1]
     c.update_body(p[5])
-    
+
 def p_constructor_header(p):
     'constructor_header : mod ID'
     global current_context, current_vartable
@@ -203,9 +208,10 @@ def p_type_id(p):
     'type :  ID'
     global current_type
     baseclass = ast.lookup(ast.classtable, p[1])
-    if (baseclass == None):
+    if (baseclass is None):
         signal_error('Class {0} does not exist!'.format(p[1]), p.lineno(1))
-    p[0] = current_type = ast.Type(baseclass.name)
+    else:
+        p[0] = current_type = ast.Type(baseclass.name)
 
 def p_var_list_plus(p):
     'var_list : var_list COMMA var'
@@ -275,12 +281,12 @@ def p_block_begin(p):
     'block_begin : '
     global current_vartable
     current_vartable.enter_block()
-    
+
 def p_block_end(p):
     'block_end : '
     global current_vartable
     current_vartable.leave_block()
-    
+
 def p_stmt_list_empty(p):
     'stmt_list : '
     p[0] = []
@@ -302,7 +308,9 @@ def p_stmt_for(p):
     p[0] = ast.ForStmt(p[3], p[5], p[7], p[9], p.lineno(1))
 def p_stmt_return(p):
     'stmt : RETURN expr_opt SEMICOLON'
+    global current_method
     p[0] = ast.ReturnStmt(p[2], p.lineno(1))
+    p[0].updateMethod(current_method)
 def p_stmt_stmt_expr(p):
     'stmt : stmt_expr SEMICOLON'
     p[0] = ast.ExprStmt(p[1], p.lineno(2))
@@ -352,22 +360,28 @@ def p_primary_literal(p):
     p[0] = p[1]
 def p_primary_this(p):
     'primary : THIS'
+    global current_class
     p[0] = ast.ThisExpr(p.lineno(1))
+    p[0].updateClass(current_class)
 def p_primary_super(p):
     'primary : SUPER'
+    global current_class
     p[0] = ast.SuperExpr(p.lineno(1))
+    p[0].updateClass(current_class)
 def p_primary_paren(p):
     'primary : LPAREN expr RPAREN'
     p[0] = p[2]
 def p_primary_newobj(p):
     'primary : NEW ID LPAREN args_opt RPAREN'
+    global current_class
     cname = p[2]
     c = ast.lookup(ast.classtable, cname)
     if (c != None):
         p[0] = ast.NewObjectExpr(c, p[4], p.lineno(1))
+        p[0].updateClass(current_class)
     else:
         signal_error('Class "{0}" in "new" not defined (yet?)'.format(cname), p.lineno(2))
-        
+
 def p_primary_lhs(p):
     'primary : lhs'
     p[0] = p[1]
@@ -396,9 +410,12 @@ def p_lhs(p):
 
 def p_field_access_dot(p):
     'field_access : primary DOT ID'
+    global current_class
     p[0] = ast.FieldAccessExpr(p[1], p[3], p.lineno(2))
+    p[0].updateClass(current_class)#This expr refer to the containing class
 def p_field_access_id(p):
     'field_access : ID'
+    global current_class, current_vartable
     vname = p[1]
     v = current_vartable.find_in_scope(vname)
     if (v != None):
@@ -411,7 +428,10 @@ def p_field_access_id(p):
             p[0] = ast.ClassReferenceExpr(c, p.lineno(1))
         else:
             # reference to a non-local var; assume field
-            p[0] = ast.FieldAccessExpr(ast.ThisExpr(p.lineno(1)), vname, p.lineno(1))
+            thisexpr = ast.ThisExpr(p.lineno(1))
+            thisexpr.updateClass(current_class)
+            p[0] = ast.FieldAccessExpr(thisexpr, vname, p.lineno(1))
+            p[0].updateClass(current_class)#This expr refer to the current class
 
 def p_array_access(p):
     'array_access : primary LBRACKET expr RBRACKET'
@@ -419,8 +439,10 @@ def p_array_access(p):
 
 def p_method_invocation(p):
     'method_invocation : field_access LPAREN args_opt RPAREN'
+    global current_class
     if (isinstance(p[1], ast.FieldAccessExpr)):
         p[0] = ast.MethodInvocationExpr(p[1], p[3], p.lineno(2))
+        p[0].updateClass(current_class)#This expr refer to the current class
     else:
         # p[1] is a local variable or a class name
         if (isinstance(p[1], ast.VarExpr)):
@@ -529,7 +551,7 @@ parser = yacc.yacc()
 def signal_error(string, lineno):
     print "{1}: {0}".format(string, lineno)
     decaflexer.errorflag = True
-    
+
 def from_file(filename):
     try:
         with open(filename, "rU") as f:
