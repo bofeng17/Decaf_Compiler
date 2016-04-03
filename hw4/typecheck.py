@@ -16,19 +16,20 @@ def is_subclass(c1, c2, includeFlag):
 
 #assuming t1 and t2 are of class Type defined in ast
 #check if t1 is subtype of t2, return True or False
-def is_subtype(t1, t2):
+def is_subtype(t1, t2, strict=False):
 
-    if(t1 is t2):#Neccessary? can make it faster
-        return True
+    if(not strict):
+        if(t1 is t2):#Neccessary? can make it faster
+            return True
 
-    #rule No.1, t1 is same as t2
-    if(t1.kind == t2.kind):
-        if(t1.kind != 'array'):
-            if(t1.typename == t2.typename):
-                return True
-        else:
-            if(t1.basetype == t2.basetype):
-                return True
+        #rule No.1, t1 is same as t2
+        if(t1.kind == t2.kind):
+            if(t1.kind != 'array'):
+                if(t1.typename == t2.typename):
+                    return True
+            else:
+                if(t1.basetype == t2.basetype):
+                    return True
 
     #rule No.2:int is subtype of float
     if(t1.kind == 'basic' and t2.kind == 'basic'):
@@ -60,11 +61,11 @@ def is_subtype(t1, t2):
 
 
 
-def is_subtype_args(args1, args2):
+def is_subtype_args(args1, args2, strict=False):
     if(len(args1) == len(args2)):
         subtype_ok = True
         for a1, a2 in itertools.izip(args1, args2):
-            if(not is_subtype(a1, a2)):
+            if(not is_subtype(a1, a2, strict)):
                 subtype_ok = False
                 break
         return subtype_ok
@@ -99,8 +100,8 @@ def check_methods(meths):
             if(m.name == check_m.name and (m is not check_m)):
                 check_m_types = check_m.vars.get_params_types()
                 m_types = m.vars.get_params_types()
-                if(not (is_subtype_args(check_m_types, m_types) \
-                        or is_subtype_args(m_types, check_m_types))):
+                if(not (is_subtype_args(check_m_types, m_types, True) \
+                        or is_subtype_args(m_types, check_m_types, True))):
                     print "methods {0} ID {1} and {2} have conflict arg types".format(m.name, m.id, check_m.id)
                     sys.exit(-1)
 
