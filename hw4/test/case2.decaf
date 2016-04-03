@@ -1,0 +1,9 @@
+class A {
+  int f(float k, int j) {
+   	return 0;
+  }
+  // should throw an error
+  int f(int k, float j) {
+  	return 0;
+  }
+}

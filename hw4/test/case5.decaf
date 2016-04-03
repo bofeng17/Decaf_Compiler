@@ -1,0 +1,9 @@
+class A {
+  A(float k, int j) {
+   
+  }
+  // should throw an error
+  A(int k, float j) {
+
+  }
+}
