@@ -18,3 +18,11 @@ decafch.py	Driver: processes arguments and gets file name to pass
 		Argument given to decafch may omit this suffix; e.g.
 				python decafch test
 		will read from test.decaf.
+
+typecheck.py: the type checker that provides the important typechecking helper functions
+    including:  is_sub_type(), resolve_field(), resolve_method(), resolve_ctor()
+            and method overloading rules enforcements
+
+
+in hw4, all the stmts and exprs in ast.py are added function resolveType() to resolve the type of the stmt/expr and store it in a new field, expr_type
+
