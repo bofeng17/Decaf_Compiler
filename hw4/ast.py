@@ -1,4 +1,6 @@
-classtable = {}  # initially empty dictionary of classes. {class_name: Class object, ...}
+import typecheck
+import sys
+classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
 lastconstructor = 0
 
@@ -10,13 +12,8 @@ def lookup(table, key):
         return None
 
 def addtotable(table, key, value):
-    table[key] = value # the order in dict differs than that in list
+    table[key] = value
 
-def trav_ast():
-    for cid in classtable:
-        c = classtable[cid]
-        c.trav()
-    print "-----------------------------------------------------------------------------"
 
 def print_ast():
     for cid in classtable:
@@ -24,6 +21,21 @@ def print_ast():
         c.printout()
     print "-----------------------------------------------------------------------------"
 
+def check_type():
+    for cid in classtable:
+        c = classtable[cid]
+        if(c.builtin):
+            continue
+        c.checkMethods()#check T1->S1 T2->S2, T1 strict dominate T2 or vise vesa
+        c.resolveType()
+
+def signal_error(etype, rtype, lineno):
+    string = 'Type error: expect {0}, but get {1}'.format(etype, rtype)
+    print "Line #{1}: {0}".format(string, lineno)
+    sys.exit(-1)
+def on_error(string, lineno):
+    print "Line #{1}: {0}".format(string, lineno)
+    sys.exit(-1)
 
 def initialize_ast():
     # define In class:
@@ -33,64 +45,51 @@ def initialize_ast():
     cout.builtin = True     # this, too, is a builtin class
 
     scanint = Method('scan_int', cin, 'public', 'static', Type('int'))
-    scanint.update_formal_type(Type([], 'tuple'))
     scanint.update_body(SkipStmt(None))    # No line number information for the empty body
     cin.add_method(scanint)
 
     scanfloat = Method('scan_float', cin, 'public', 'static', Type('float'))
-    scanfloat.update_formal_type(Type([], 'tuple'))
     scanfloat.update_body(SkipStmt(None))    # No line number information for the empty body
     cin.add_method(scanfloat)
 
     printint = Method('print', cout, 'public', 'static', Type('void'))
-    printint.update_formal_type(Type([Type('int')], 'tuple'))
     printint.update_body(SkipStmt(None))    # No line number information for the empty body
     printint.add_var('i', 'formal', Type('int'))   # single integer formal parameter
     cout.add_method(printint)
 
     printfloat = Method('print', cout, 'public', 'static', Type('void'))
-    printfloat.update_formal_type(Type([Type('float')], 'tuple'))
     printfloat.update_body(SkipStmt(None))    # No line number information for the empty body
     printfloat.add_var('f', 'formal', Type('float'))   # single float formal parameter
     cout.add_method(printfloat)
 
     printboolean = Method('print', cout, 'public', 'static', Type('void'))
-    printboolean.update_formal_type(Type([Type('boolean')], 'tuple'))
     printboolean.update_body(SkipStmt(None))    # No line number information for the empty body
     printboolean.add_var('b', 'formal', Type('boolean'))   # single boolean formal parameter
     cout.add_method(printboolean)
 
     printstring = Method('print', cout, 'public', 'static', Type('void'))
-    printstring.update_formal_type(Type([Type('string')], 'tuple'))
     printstring.update_body(SkipStmt(None))    # No line number information for the empty body
     printstring.add_var('b', 'formal', Type('string'))   # single string formal parameter
     cout.add_method(printstring)
 
     addtotable(classtable, "In", cin)
     addtotable(classtable, "Out", cout)
-
+    cin.resolveType()
+    cout.resolveType()
 
 class Class:
     """A class encoding Classes in Decaf"""
     def __init__(self, classname, superclass):
         self.name = classname
-        self.superclass = superclass # None or class object
+        self.superclass = superclass
         self.fields = {}  # dictionary, keyed by field name
         self.constructors = []
         self.methods = []
         self.builtin = False
 
-    def trav(self):
-        for f in self.fields:
-            (self.fields[f]).trav()
-        for k in self.constructors:
-            k.trav()
-        for m in self.methods:
-            m.trav()
-
     def printout(self):
         if (self.builtin):
-            return     # Do not print builtin methods
+            return     # Do not print builtin classes
 
         print "-----------------------------------------------------------------------------"
         print "Class Name: {0}".format(self.name)
@@ -110,6 +109,17 @@ class Class:
         for m in self.methods:
             m.printout()
 
+    def resolveType(self):
+        for k in self.constructors:
+            k.resolveType()
+        for m in self.methods:
+            m.resolveType()
+
+    def checkMethods(self):
+        typecheck.check_methods(self.methods)
+
+
+
     def add_field(self, fname, field):
         self.fields[fname] = field
     def add_constructor(self, constr):
@@ -123,92 +133,36 @@ class Class:
 
 class Type:
     """A class encoding Types in Decaf"""
-    def __init__(self, basetype, kind = None, params=None):
-        if ((params == None) or (params == 0)): # None for basic type, 0 for recursive exit point of array type
-            # Elementary type
-            if basetype in ['int', 'float', 'boolean', 'string', 'void', 'null', 'error', 'correct']: # 'correct' for stmt
-                # built-in type
-                self.kind = 'elementary'
-                self.typename = basetype # build-in type name
-            elif kind in ['user', 'class-literal', 'tuple']:
-                # user-defined type/class-literal type
-                self.kind = kind
-                # self.typename:
-                # class_name if kind == 'user' or 'class-literal'
-                # list of Type if kind == 'tuple'
+    def __init__(self, basetype, kind=None, params=None):
+        if ((params == None) or (params == 0)):
+            if (basetype in ['int', 'boolean', 'float', 'string', 'void', 'error', 'null']):
+                self.kind = 'basic'
                 self.typename = basetype
-            elif (isinstance(basetype, Type)):
-                # copy from Type
+            elif (isinstance(basetype, Type)):#use an initialized type to create another Type object
                 self.kind = basetype.kind
-                self.typename = basetype.typename
+                if(self.kind == 'array'):
+                    self.basetype = basetype
+                else:
+                    self.typename = basetype.typename
             else:
-                print "Undefined type"
+                self.kind = kind#(user, class-literal)
+                if(kind == None):#these 2 lines is just for compatibility, when it is done should be removed
+                    self.kind = 'user'
+                self.typename = basetype
         else:
-            # Array type
-            bt = Type(basetype, params=params-1)
+            bt = Type(basetype, params-1)
             self.kind = 'array'
-            self.typename = bt # Type that is stripped of one level of 'array'
-
-    @staticmethod
-    def is_subtype(a, b):
-        # return (True, diff) if tuple Type a is sub-type of b
-        # TODO: verify diff value
-        diff = 0
-        # rule 1
-        if a == b:
-            return True, 0
-
-        # rule 4/6
-        if a.typename == 'null' and b.kind in ['user', 'class-literal']:
-            # TODO: diff=1 reasonable?
-            return True, 1
-
-        if a.kind == b.kind:
-            # rule 2
-            if a.typename == 'int' and b.typename == 'float':
-                return True, 1
-            # rule 3/7
-            if a.kind in ['user', 'class-literal']:
-                # if a is subclass of b
-                cls = lookup(classtable, a.typename)
-                while cls is not None:
-                    if cls.name == b.typename:
-                        return (True, diff)
-                    cls = cls.superclass
-                    diff += 1
-            elif a.kind == 'tuple':
-                if len(a.typename) == len(b.typename):
-                    for (aa, bb) in zip(a, b):
-                        (is_sub, cur_diff) = Type.is_subtype(aa, bb)
-                        if not is_sub:
-                            break
-                        diff += cur_diff
-                    return True, diff
-            # rule 5
-            elif a.kind == 'array':
-                return Type.is_subtype(a.typename, b.typename)
-
-        return False, 2**30
-
-    def __eq__(self, other):
-        if isinstance(other, Type):
-            if self.kind == other.kind and self.typename == other.typename:
-                return True
-        return False
+            self.basetype = bt
 
     def __str__(self):
         if (self.kind == 'array'):
-            return 'array(%s)'%(self.typename.__str__())
-        elif (self.kind == 'user'):
+            return 'array(%s)'%(self.basetype.__str__())
+        elif (self.kind == 'user' or self.kind == 'class-literal'):
             return 'user(%s)'%(self.typename)
-        elif (self.kind == 'class-literal'):
-            return 'class-literal(%s)'%(self.typename)
         else:
-            # Elementary type
             return self.typename
-        # TODO: do we need print tuple?
 
-    def __repr__(self):
+    def __repr(self):
         return self.__str__()
 
 class Field:
@@ -222,9 +176,6 @@ class Field:
         self.visibility = visibility
         self.storage = storage
         self.type = ftype
-
-    def trav(self):
-        pass # stub for code emission
 
     def printout(self):
         print "FIELD {0}, {1}, {2}, {3}, {4}, {5}".format(self.id, self.name, self.inclass.name, self.visibility, self.storage, self.type)
@@ -242,17 +193,11 @@ class Method:
         self.rtype = rtype
         self.vars = VarTable()
 
-    def update_formal_type(self, formal_sign): # formal_sgin: tuple Type for formal_sign
-        self.formal_type = formal_sign
-
     def update_body(self, body):
         self.body = body
 
     def add_var(self, vname, vkind, vtype):
         self.vars.add_var(vname, vkind, vtype)
-
-    def trav(self):
-        self.body.trav()
 
     def printout(self):
         print "METHOD: {0}, {1}, {2}, {3}, {4}, {5}".format(self.id, self.name, self.inclass.name, self.visibility, self.storage, self.rtype)
@@ -261,6 +206,9 @@ class Method:
         self.vars.printout()
         print "Method Body:"
         self.body.printout()
+
+    def resolveType(self):
+        self.body.resolveType()
 
 class Constructor:
     """A class encoding constructors and their attributes in Decaf"""
@@ -272,17 +220,11 @@ class Constructor:
         self.visibility = visibility
         self.vars = VarTable()
 
-    def update_formal_type(self, formal_sign): # formal_sgin: tuple Type for formal_sign
-        self.formal_type = Type(formal_sign)
-
     def update_body(self, body):
         self.body = body
 
     def add_var(self, vname, vkind, vtype):
         self.vars.add_var(vname, vkind, vtype)
-
-    def trav(self):
-        self.body.trav()
 
     def printout(self):
         print "CONSTRUCTOR: {0}, {1}".format(self.id, self.visibility)
@@ -292,14 +234,17 @@ class Constructor:
         print "Constructor Body:"
         self.body.printout()
 
+    def resolveType(self):
+        self.body.resolveType()
+
 
 class VarTable:
     """ Table of variables in each method/constructor"""
     def __init__(self):
         self.vars = {0:{}}
         self.lastvar = 0
-        self.lastblock = 0 # unique block "id" in current VarTable
-        self.levels = [0] # stack, [curBlckId, ..., topLevBlckId(i.e.0)]
+        self.lastblock = 0
+        self.levels = [0]
 
     def enter_block(self):
         self.lastblock += 1
@@ -341,6 +286,11 @@ class VarTable:
         ids = [outermost[vname].id for vname in outermost if outermost[vname].kind=='formal']
         return ids
 
+    def get_params_types(self):
+        outermost = self.vars[0]  # 0 is the outermost block
+        types = [outermost[vname].type for vname in outermost if outermost[vname].kind=='formal']
+        return types
+
     def printout(self):
         print "Variable Table:"
         for b in range(self.lastblock+1):
@@ -357,57 +307,52 @@ class Variable:
         self.kind = vkind
         self.type = vtype
 
-    def trav(self):
-        pass # should we do anything?
-
     def printout(self):
         print "VARIABLE {0}, {1}, {2}, {3}".format(self.id, self.name, self.kind, self.type)
 
-
+#Statements only have synthetic type: "Correct" or "Wrong"
+#the resolveType() function will have 2 results
+#1) the return value indicate the synthetic type
+#2) all the expr components of the stmt will have their "type of class Type" field filled up
 class Stmt(object):
     """ Top-level (abstract) class representing all statements"""
 
 class IfStmt(Stmt):
     def __init__(self, condition, thenpart, elsepart, lines):
         self.lines = lines
-        self.cond = condition
+        self.condition = condition
         self.thenpart = thenpart
         self.elsepart = elsepart
 
-    def trav(self):
-        self.cond.trav()
-        self.thenpart.trav()
-        self.elsepart.trav()
-
-        if self.cond == Type('boolean') and self.thenpart.type != Type('error') and \
-                        self.elsepart.type != Type('error'):
-            self.stmt_type = Type('correct')
-        else:
-            self.stmt_type = Type('error')
-
     def printout(self):
         print "If(",
-        self.cond.printout()
+        self.condition.printout()
         print ", ",
         self.thenpart.printout()
         print ", ",
         self.elsepart.printout()
         print ")"
 
+    def resolveType(self):
+        self.stmttype = 'Wrong'#store the 'synthetic sugar type in case we need it in the future'
+        condtype = self.condition.resolveType()
+        thentype = self.thenpart.resolveType()
+        elsetype = self.elsepart.resolveType()
+        cond = self.condition.expr_type
+        if (condtype == 'Correct' and \
+            thentype == 'Correct' and \
+            elsetype == 'Correct'):
+            if(cond.typename == 'boolean'):
+                self.stmttype = 'Correct'
+            else:
+                signal_error('boolean', cond.typename, self.lines)
+        return self.stmttype
+
 class WhileStmt(Stmt):
     def __init__(self, cond, body, lines):
         self.lines = lines
         self.cond = cond
         self.body = body
-
-    def trav(self):
-        self.cond.trav()
-        self.body.trav()
-
-        if self.cond == Type('boolean') and self.body.type != Type('error'):
-            self.stmt_type = Type('correct')
-        else:
-            self.stmt_type = Type('error')
 
     def printout(self):
         print "While(",
@@ -416,6 +361,21 @@ class WhileStmt(Stmt):
         self.body.printout()
         print ")"
 
+    def resolveType(self):
+        self.stmttype = 'Wrong'#store the 'synthetic sugar type in case we need it in the future'
+        condtype = self.cond.resolveType()
+        bodytype = self.body.resolveType()
+        cond = self.cond.expr_type
+        if (condtype == 'Correct' and \
+            bodytype == 'Correct'):
+            if(cond.typename == 'boolean'):
+                self.stmttype = 'Correct'
+            else:
+                signal_error('boolean', cond.typename, self.lines)
+        return self.stmttype
+
+
+
 class ForStmt(Stmt):
     def __init__(self, init, cond, update, body, lines):
         self.lines = lines
@@ -423,18 +383,6 @@ class ForStmt(Stmt):
         self.cond = cond
         self.update = update
         self.body = body
-
-    def trav(self):
-        self.init.trav()
-        self.cond.trav()
-        self.update.trav()
-        self.body.trav()
-
-        if self.init.type != Type('error') and self.cond.type == Type('boolean') and \
-            self.update.type != Type('error') and self.body.type != Type('error'):
-            self.stmt_type = Type('correct')
-        else:
-            self.stmt_type = Type('error')
 
     def printout(self):
         print "For(",
@@ -450,29 +398,27 @@ class ForStmt(Stmt):
         self.body.printout()
         print ")"
 
+    def resolveType(self):
+        self.stmttype = 'Wrong'#store the 'synthetic sugar type in case we need it in the future'
+        condtype = self.cond.resolveType()
+        inittype = self.init.resolveType()
+        updatetype = self.update.resolveType()
+        bodytype = self.body.resolveType()
+        cond = self.cond.expr_type
+        if (condtype == 'Correct' and \
+            inittype == 'Correct' and \
+            updatetype == 'Correct' and \
+            bodytype == 'Correct'):
+            if(cond.typename == 'boolean'):
+                self.stmttype = 'Correct'
+            else:
+                signal_error('boolean', cond.typename, self.lines)
+        return self.stmttype
+
 class ReturnStmt(Stmt):
-    def __init__(self, expr, containing_method, lines):
+    def __init__(self, expr, lines):
         self.lines = lines
         self.expr = expr
-        self.containing_method = containing_method # can be either method/ctro
-
-    def trav(self):
-        self.stmt_type = Type('error')
-        if self.expr:
-            # return expr;
-            self.expr.trav()
-            if isinstance(self.containing_method, Method):
-                if self.containing_method.rtype == self.expr.type:
-                    self.stmt_type = Type('correct')
-        else:
-            # return;
-            if isinstance(self.containing_method, Method):
-                # method
-                if self.containing_method.rtype == Type('void'):
-                    self.stmt_type = Type('correct')
-            else:
-                # ctor
-                self.stmt_type = Type('correct')
 
     def printout(self):
         print "Return(",
@@ -480,19 +426,33 @@ class ReturnStmt(Stmt):
             self.expr.printout()
         print ")"
 
+    def updateMethod(self, methodref):
+        self.methodref = methodref
+
+    def resolveType(self):
+        self.stmttype = 'Wrong'#store the 'synthetic sugar type in case we need it in the future'
+        rtype = self.methodref.rtype#Type obj
+        if (self.expr == None):
+            if (rtype.kind == 'basic' and rtype.typename == 'void'):
+                self.stmttype = 'Correct'
+        else:
+            rettype = self.expr.resolveType()
+            exprtype = self.expr.expr_type;#Type obj
+            if(rettype == 'Correct' and typecheck.is_subtype(exprtype, rtype)):
+                self.stmttype = 'Correct'
+
+        if(self.stmttype == 'Wrong'):
+            signal_error(rtype, exprtype, self.lines)
+        return self.stmttype
+
+
+
+
+
 class BlockStmt(Stmt):
     def __init__(self, stmtlist, lines):
         self.lines = lines
         self.stmtlist = [s for s in stmtlist if (s != None) and (not isinstance(s, SkipStmt))]
-
-    def trav(self):
-        type_correct = True
-        for s in self.stmtlist:
-            s.trav()
-            if s.trav() == Type('error'):
-                type_correct = False
-                break
-        self.stmt_type = Type('correct') if type_correct else Type('error')
 
     def printout(self):
         print "Block(["
@@ -502,53 +462,63 @@ class BlockStmt(Stmt):
             print ", ",
             s.printout()
         print "])"
+    def resolveType(self):
+        self.stmttype = 'Correct'
+        for s in self.stmtlist:
+            if(s.resolveType()=='Wrong'):
+                self.stmttype = 'Wrong'
+                break
+        return self.stmttype
+
 
 class BreakStmt(Stmt):
     def __init__(self, lines):
         self.lines = lines
 
-    def trav(self):
-        self.stmt_type = Type('correct')
-
     def printout(self):
         print "Break"
 
+    def resolveType():
+        return 'Correct'
 class ContinueStmt(Stmt):
     def __init__(self, lines):
         self.lines = lines
 
-    def trav(self):
-        self.stmt_type = Type('correct')
-
     def printout(self):
         print "Continue"
+    def resolveType():
+        return 'Correct'
 
 class ExprStmt(Stmt):
     def __init__(self, expr, lines):
         self.lines = lines
         self.expr = expr
 
-    def trav(self):
-        self.expr.trav()
-
-        self.stmt_type = Type('correct') if self.expr.type != Type('error') else Type('error')
-
     def printout(self):
         print "Expr(",
         self.expr.printout()
         print ")"
 
+    def resolveType(self):
+        self.stmttype = 'Wrong'
+        if(self.expr.resolveType() == 'Correct'):
+            self.stmttype = 'Correct'
+        return self.stmttype
+
 class SkipStmt(Stmt):
     def __init__(self, lines):
         self.lines = lines
 
-    def trav(self):
-        self.stmt_type = Type('correct')
-
     def printout(self):
         print "Skip"
+    def resolveType(self):
+        return 'Correct'
 
 
+
+#For expressions, the resolveType function will have two results
+#1) the return value indicate the synthetic type of the expr, "Correct" or "Wrong"
+#2) each expr will have a "type" field, indicate the concret type of this expr
 class Expr(object):
     def __repr__(self):
         return "Unknown expression"
@@ -567,13 +537,6 @@ class ConstantExpr(Expr):
         elif (kind == 'string'):
             self.string = arg
 
-    def trav(self):
-        if (self.kind == 'Null'):
-            self.type = Type('null')
-        elif self.kind in ['True', 'False']:
-            self.type = Type('boolean')
-        else: # int, float, string
-            self.type = Type(self.kind)
 
     def __repr__(self):
         s = "Unknown"
@@ -591,35 +554,52 @@ class ConstantExpr(Expr):
             s = "False"
         return "Constant({0})".format(s)
 
+    def resolveType(self):
+        if(self.kind in ['int', 'float', 'string']):
+            self.expr_type = Type(self.kind)
+        if(self.kind in ['True', 'False']):
+            self.expr_type = Type('boolean')
+        if(self.kind == 'Null'):
+            self.expr_type = Type('null')
+        return 'Correct'
+
 class VarExpr(Expr):
     def __init__(self, var, lines):
         self.lines = lines
-        self.var = var
-
-    def trav(self):
-        self.var.trav()
-        self.type = self.var.type
-
+        self.var = var# Variable obj
+        self.expr_type = var.type
     def __repr__(self):
         return "Variable(%d)"%self.var.id
+    def resolveType(self):
+        self.expr_type = self.var.type
+        return 'Correct'
 
 class UnaryExpr(Expr):
     def __init__(self, uop, expr, lines):
         self.lines = lines
         self.uop = uop
         self.arg = expr
-
-    def trav(self):
-        self.uop.trav()
-        self.arg.trav()
-
-        if self.uop == 'uminus':
-            self.type = self.arg.type if self.arg.type in [Type('int'), Type('float')] else Type('error')
-        else: # 'neg'
-            self.type = self.arg.type if self.arg.type == Type('boolean') else Type('error')
-
     def __repr__(self):
         return "Unary({0}, {1})".format(self.uop, self.arg)
+    def resolveType(self):
+        if (self.expr.resolveType() == 'Correct'):
+            resolved_type = self.expr.expr_type
+            if(self.uop == 'uminus'):
+                if(resolved_type.typename in ['int', 'float']):
+                    self.expr_type = resolved_type
+                    return 'Correct'
+                else:
+                    signal_error('int or float', resolved_type.typename, self.lines)
+            if(self.uop == 'neg'):
+                if(resolved_type.typename == 'boolean'):
+                    self.expr_type = resolved_type
+                    return 'Correct'
+                else:
+                    signal_error('boolean', resolved_type.typename, self.lines)
+
+        self.expr_type = Type('error')
+        return 'Wrong'
+
 
 class BinaryExpr(Expr):
     def __init__(self, bop, arg1, arg2, lines):
@@ -627,49 +607,62 @@ class BinaryExpr(Expr):
         self.bop = bop
         self.arg1 = arg1
         self.arg2 = arg2
-
-    def trav(self):
-        self.arg1.trav()
-        self.arg2.trav()
-
-        # propagate type
-        self.type = Type('error')
-        if self.bop in ['+', '-', '*', '/']:
-            if self.arg1.type == Type('int') and self.arg2.type == Type('int'):
-                self.type = Type('int')
-            elif self.arg1.type in [Type('int'), Type('float')] and self.arg2.type in [Type('int'), Type('float')]:
-                self.type = Type('float')
-        elif self.bop in ['&&', '||']:
-            if self.arg1.type == Type('boolean') and self.arg2.type == Type('boolean'):
-                self.type = Type('boolean')
-        elif self.bop in ['<', '<=', '>', '>=']:
-            if self.arg1.type in [Type('int'), Type('float')] and self.arg2.type in [Type('int'), Type('float')]:
-                self.type = Type('boolean')
-        else: # ['==', '!=']
-            if self.arg1.type.is_subtype(self.arg2.type) or self.arg2.type.is_subtype(self.arg1.type):
-                self.type = Type('boolean')
-
     def __repr__(self):
         return "Binary({0}, {1}, {2})".format(self.bop,self.arg1,self.arg2)
+    def resolveType(self):
+        if(self.arg1.resolveType() == 'Correct' and self.arg2.resolveType() == 'Correct'):
+            arg1_type = self.arg1.expr_type
+            arg2_type = self.arg2.expr_type
+            if(self.bop in ['add','sub','mul','div']):
+                if(arg1_type.typename=='int' and arg2_type.typename=='int'):
+                    self.expr_type = Type('int')
+                    return 'Correct'
+                elif(arg1_type.typename=='float' or arg2_type.typename=='float'):
+                    self.expr_type = Type('float')
+                    return 'Correct'
+                else:
+                    signal_error('int/float', arg1_type.typename+'/'+arg2_type.typename, self.lines)
+
+            if(self.bop in ['and','or']):
+                if(arg1_type.typename=='boolean' and arg2_type.typename=='boolean'):
+                    self.expr_type = Type('boolean')
+                    return 'Correct'
+                else:
+                    signal_error('boolean/boolean', arg1_type.typename+'/'+arg2_type.typename, self.lines)
+
+            if(self.bop in ['lt','leq','gt','geq']):
+                if(arg1_type.typename in ['int','float'] or arg2_type.typename in ['int','float']):
+                    self.expr_type = Type('boolean')
+                    return 'Correct'
+                else:
+                    signal_error('int/float', arg1_type.typename+'/'+arg2_type.typename, self.lines)
+
+            if(self.bop in ['eq','neq']):
+                if(typecheck.is_subtype(arg1_type, arg2_type) or \
+                   typecheck.is_subtype(arg2_type, arg1_type)):
+                    self.expr_type = Type('boolean')
+                    return 'Correct'
+
+        self.expr_type = Type('error')
+        return 'Wrong'
 
 class AssignExpr(Expr):
     def __init__(self, lhs, rhs, lines):
         self.lines = lines
         self.lhs = lhs
         self.rhs = rhs
-
-    def trav(self):
-        self.lhs.trav()
-        self.rhs.trav()
-
-        if (self.lhs.type != 'error' and self.rhs.type != 'error') and \
-            self.rhs.type.is_subtype(self.lhs.type):
-            self.type = self.rhs.type # TODO: self.rhs.type or self.lhs.type?
-        else:
-            self.type = Type('error')
-
     def __repr__(self):
-        return "Assign({0}, {1}, {2}, {3})".format(self.lhs, self.rhs, self.lhs.type, self.rhs.type)
+        return "Assign({0}, {1}, {2}, {3})".format(self.lhs, self.rhs, self.lhs.expr_type, self.rhs.expr_type)
+
+
+    def resolveType(self):
+        if(self.lhs.resolveType() == 'Correct' and self.rhs.resolveType() == 'Correct'):
+            if(typecheck.is_subtype(self.rhs.expr_type, self.lhs.expr_type)):
+                self.expr_type = self.rhs.expr_type#TODO: verify there is no need to alloc a new type
+                return 'Correct'
+        self.expr_type = Type('error')
+        return 'Wrong'
+
 
 
 class AutoExpr(Expr):
@@ -678,254 +671,194 @@ class AutoExpr(Expr):
         self.arg = arg
         self.oper = oper
         self.when = when
-
-    def trav(self):
-        self.arg.trav()
-
-        self.type = self.arg.type if self.arg.type in \
-                                     [Type('int'), Type('float')] else Type('error')
-
     def __repr__(self):
         return "Auto({0}, {1}, {2})".format(self.arg, self.oper, self.when)
+    def resolveType(self):
+        if(self.arg.resolveType() == 'Correct'):
+            if(self.arg.expr_type.typename in ['int','float']):
+                self.expr_type = self.arg.expr_type#TODO: verify there is no need to alloc a new type
+                return 'Correct'
+            else:
+                signal_error('int/float',self.arg.expr_type.typename, self.lines)
+        self.expr_type = Type('error')
+        return 'Wrong'
+
 
 class FieldAccessExpr(Expr):
-    def __init__(self, base, fname, containing_cls, lines):
+    def __init__(self, base, fname, lines):
         self.lines = lines
-        self.type = None # resolved by name resolution
-        self.field_id = None # resolved by name resolution
         self.base = base
         self.fname = fname
-        self.containing_cls = containing_cls
-
-    def resolve_name(self):
-        # find start class for searching, and set storage
-        storage = 'instance'
-        if isinstance(self.base, ThisExpr):
-            cls = self.containing_cls
-        elif isinstance(self.base, SuperExpr):
-            cls = self.containing_cls.superclass
-        elif isinstance(self.base, NewObjectExpr):
-            cls = self.base.classref
-        elif isinstance(self.base, ClassReferenceExpr):
-            cls = self.base.classref
-            storage = 'static'
-        else:
-            # TODO: This branch should never execute
-            print self.lines + ': Unrecognized base type for MethodInvocationExpr'
-            return False
-
-        # find candidate and test it
-        while cls is not None:
-            if self.fname in cls.fields: # differs than cls.methods, cls.fields is dict
-                field = cls.fields[self.name]
-                if storage == field.storage and \
-                        (field.visibility == 'public' or cls == self.containing_cls):
-                    self.field_id = field.id
-                    self.type = field.rtype
-                    return True
-            cls = cls.superclass
-        return False
-
-    def trav(self):
-        # TODO: really need explicit traverse for self.base?
-        self.base.trav()
-
-        if isinstance(self.base, FieldAccessExpr):
-            # Now it's sure self.base is real Field access (cannot be method_invocation)
-            # so resolve name for it
-            # Cautious! call self.base.resolve_name() instead of self.resolve_name()
-            # leave self.type unresolved because it may be real Field access or method_invocation
-            if not self.base.resolve_name():
-                # self.type is already set if self.resolve_name() is True
-                self.type = Type('error')
-
     def __repr__(self):
-        return "Field-access({0}, {1}, {2})".format(self.base, self.fname, self.field_id)
+        return "Field-access({0}, {1}, {2})".format(self.base, self.fname, self.resolved_field.id)
+    def updateClass(self, containingCls):
+        self.containingCls = containingCls
+    def resolveType(self):
+        if(self.base.resolveType() == 'Correct'):
+            base_type = self.base.expr_type
+            target_cls = lookup(classtable, base_type.typename)#the class to start looking at(obj or static)
+            accessing_cls = self.containingCls
+            if(base_type.kind == 'user'):
+                            #(target_cls,accessing_cls,field_name,static=False)
+                self.resolved_field = typecheck.resolve_field(target_cls, accessing_cls, self.fname,False)
+            if(base_type.kind == 'class-literal'):
+                            #(target_cls,accessing_cls,field_name,static=True)
+                self.resolved_field = typecheck.resolve_field(target_cls, accessing_cls, self.fname,True)
+            if(self.resolved_field!=None):
+                self.expr_type = self.resolved_field.type
+                return 'Correct'
+            else:
+                on_error("Can't resolve field: {0}.{1} please check the visibility and storage types of intended field to call ".format(base_type.typename,self.fname), self.lines)
+        self.expr_type = Type('error')
+        return 'Wrong'
+
+
+
 
 class MethodInvocationExpr(Expr):
-    def __init__(self, field, args, containing_cls, lines):
+    def __init__(self, field, args, lines):
         self.lines = lines
-        self.type = None # resolved by name resolution
-        self.method_id = None # resolved by name resolution
-        # FieldAccessExpr is broken down into two parts: base & mname
-        self.base = field.base # ThisExpr/SuperExpr/NewObjectExpr/ClassReferenceExpr
-        self.mname = field.fname # method name
-        self.args = args # [expr1, expr2, ...]
-        self.containing_cls = containing_cls # Class object
-
-    def resolve_name(self):
-        param_type = []
-        for arg in self.args:
-            param_type.append(arg.type)
-        param_sign = Type(param_type) # signature of param passed into
-
-        # find start class for searching, and set storage
-        storage = 'instance'
-        if isinstance(self.base, ThisExpr):
-            cls = self.containing_cls
-        elif isinstance(self.base, SuperExpr):
-            cls = self.containing_cls.superclass
-        elif isinstance(self.base, NewObjectExpr):
-            cls = self.base.classref
-        elif isinstance(self.base, ClassReferenceExpr):
-            cls = self.base.classref
-            storage = 'static'
-        else:
-            # TODO: This branch should never execute
-            print self.lines + ': Unrecognized base type for MethodInvocationExpr'
-            return False
-
-        # find candidate and test it
-        found = False
-        min_diff = 2**30 # set to an arbitrarily large number
-        while cls is not None:
-            for method in cls.methods:
-                if self.mname == method.name and storage == method.storage and \
-                        (method.visibility == 'public' or cls == self.containing_cls):
-                    (is_sub, total_diff) = Type.is_subtype(param_sign, method.formal_type)
-                    if is_sub:
-                        found = True
-                        if total_diff < min_diff:
-                            min_diff = total_diff
-                            self.method_id = method.id
-                            self.type = method.rtype
-            if found:
-                return True
-            cls = cls.superclass
-        return False
-
-    def trav(self):
-        self.base.trav()
-        # must firstly decorate subtree of self.args with type info
-        for arg in self.args:
-            arg.trav()
-
-        # then do name resolution with type info of self.args
-        if not self.resolve_name():
-            # self.type is already set if self.resolve_name() is True
-            self.type = Type('error')
-
+        self.base = field.base
+        self.mname = field.fname
+        self.args = args#[expr_arg1, expr_arg2, expr_arg3,...]
     def __repr__(self):
-        return "Method-call({0}, {1}, {2}, {3})".format(self.base, self.mname, self.args, self.method_id)
-
-
+        return "Method-call({0}, {1}, {2},{3})".format(self.base, self.mname, self.args, self.resolved_meth.id)
+    def updateClass(self, containingCls):
+        self.containingCls = containingCls
+    def resolveType(self):
+        if(self.base.resolveType() == 'Correct'):
+            args_ok = True
+            for arg in self.args:
+                if(arg.resolveType() != 'Correct'):
+                    args_ok = False
+                    break
+            if(args_ok):
+                base_type = self.base.expr_type
+                #the class to start looking at
+                target_cls = lookup(classtable, base_type.typename)
+                accessing_cls = self.containingCls
+                if(base_type.kind == 'user'):
+                    #(target_cls,accessing_cls,meth_name,args(type resolved),static=False)
+                    self.resolved_meth = typecheck.resolve_method(target_cls, accessing_cls, self.mname,self.args,False)
+                if(base_type.kind == 'class-literal'):
+                    #(target_cls,accessing_cls,meth_name,args(type resolved),static=True)
+                    self.resolved_meth = typecheck.resolve_method(target_cls, accessing_cls, self.mname,self.args,True)
+                if(self.resolved_meth!=None):
+                    self.expr_type = self.resolved_meth.rtype
+                    return 'Correct'
+                else:
+                    on_error("Can't resolve method: {0}, please check the visibility and storage types of the intended method to call".format(self.mname), self.lines)
+        self.expr_type = Type('error')
+        return 'Wrong'
 
 class NewObjectExpr(Expr):
-    def __init__(self, cref, args, containing_cls, lines):
+    def __init__(self, cref, args, lines):
         self.lines = lines
-        self.type = None # resolved by name resolution
-        self.ctor_id = None # resolved by name resolution
-        self.classref = cref # Class object, cannot be None
+        self.classref = cref
         self.args = args
-        self.containing_cls = containing_cls # Class object
-    # called when AST is traversed for NameResolution purpose
-    def resolve_name(self):
-        param_type = []
-        for arg in self.args:
-            param_type.append(arg.type)
-        param_sign = Type(param_type) # signature of param passed into
-
-        # find candidate and test it
-        cls = self.classref
-        found = False
-        min_diff = 2**30 # set to an arbitrarily large number
-        while cls is not None:
-            for ctor in cls.constructors:
-                if ctor.visibility == 'public' or cls == self.containing_cls:
-                    (is_sub, total_diff) = Type.is_subtype(param_sign, ctor.formal_type)
-                    if is_sub:
-                        found = True
-                        if total_diff < min_diff:
-                            min_diff = total_diff
-                            self.ctor_id = ctor.id
-                            self.type = Type(self.classref.name, kind='user')
-            if found:
-                return True
-            cls = cls.superclass
-        return False
-
-    def trav(self):
-        # must firstly decorate subtree of self.args with type info
-        self.args.trav()
-
-        # then do name resolution with type info of self.args
-        if not self.resolve_name():
-            # self.type is already set if self.resolve_name() is True
-            self.type = Type('error')
-
+    def updateClass(self, containingCls):
+        self.containingCls = containingCls
     def __repr__(self):
-        return "New-object({0}, {1}, {2})".format(self.classref.name, self.args, self.ctor_id)
+        return "New-object({0},{1},{2})".format(self.classref.name, self.args, self.resolved_ctor.id)
+    def resolveType(self):
+        args_ok = True
+        for arg in self.args:
+            if(arg.resolveType() != 'Correct'):
+                args_ok = False
+                break
+        if(args_ok):
+            target_cls = self.classref
+            accessing_cls = self.containingCls
+            #(target_cls,accessing_cls,args(type resolved))
+            self.resolved_ctor = typecheck.resolve_ctor(target_cls, accessing_cls, self.args)
+            if(self.resolved_ctor != None):
+                self.expr_type = Type(target_cls.name, 'user')
+                return 'Correct'
+            else:
+                on_error("Can't resolve CONSTRUCTOR for new object: {0}, please check the visibility constructors ".format(self.classref.name), self.lines)
+        self.expr_type = Type('error')
+        return 'Wrong'
+
 
 class ThisExpr(Expr):
-    def __init__(self, containing_cls, lines):
+    def __init__(self, lines):
         self.lines = lines
-        self.containing_cls = containing_cls
-
-    def trav(self):
-        self.type = Type(self.containing_cls, 'user')
-
     def __repr__(self):
         return "This"
+    def updateClass(self, containingCls):
+        self.containingCls = containingCls
+    def resolveType(self):
+        self.expr_type = Type(self.containingCls.name, 'user')
+        return 'Correct'
 
 class SuperExpr(Expr):
-    def __init__(self, containing_cls, lines):
+    def __init__(self, lines):
         self.lines = lines
-        self.containing_cls = containing_cls
-
-    def trav(self):
-        self.type = Type(self.containing_cls.superclass, 'user')
-
     def __repr__(self):
         return "Super"
+    def updateClass(self, containingCls):
+        self.containingCls = containingCls
+    def resolveType(self):
+        parentCls = self.containingCls.superclass
+        if(parentCls != None):
+            self.expr_type = Type(parentCls.name, 'user')
+            return 'Correct'
+        self.expr_type = Type('error')
+        return 'Wrong'
+
 
 class ClassReferenceExpr(Expr):
     def __init__(self, cref, lines):
         self.lines = lines
         self.classref = cref
-
-    def trav(self):
-        self.type = Type(self.classref.name, 'class-literal')
-
     def __repr__(self):
         return "ClassReference({0})".format(self.classref.name)
+    def resolveType(self):
+        self.expr_type = Type(self.classref.name, 'class-literal')
+        return 'Correct'
 
-class ArrayAccessExpr(Expr):
+
+class ArrayAccessExpr(Expr):#the process of derefence--peel off array(T) and get T
     def __init__(self, base, index, lines):
         self.lines = lines
         self.base = base
         self.index = index
-
-    def trav(self):
-        self.base.trav()
-        self.index.trav()
-        # TODO:
-        if self.index.type == Type('int') and self.base.type.kind == 'array':
-            self.type = self.base.type.typename
-        else:
-            self.type = Type('error')
-
     def __repr__(self):
         return "Array-access({0}, {1})".format(self.base, self.index)
+    def resolveType(self):
+        if(self.base.resolveType() == 'Correct' and self.index.resolveType() == 'Correct'):
+            base_type = self.base.expr_type
+            index_type = self.index.expr_type
+            if(base_type.kind == 'array' and index_type.typename == 'int'):
+                self.expr_type = base_type.basetype#TODO: verify no need to alloc a new type
+                return 'Correct'
+        self.expr_type = Type('error')
+        return 'Wrong'
+
+
 
 class NewArrayExpr(Expr):
     def __init__(self, basetype, args, lines):
         self.lines = lines
-        self.basetype = basetype # Type object
-        self.args = args # from dim_expr_plus, [expr1, expr2, expr3, ...]
-
-    def trav(self):
-        self.args.trav()
-
-        type_valid = True
-        for args in self.args:
-            if args.type != Type('int'):
-                type_valid = False
-                break
-
-        if type_valid:
-            self.type = self.basetype
-        else:
-            self.type = Type('error')
-
+        self.basetype = basetype#already built during ast construction
+        self.args = args#sequence of dim_expr
     def __repr__(self):
         return "New-array({0}, {1})".format(self.basetype, self.args)
+    def resolveType(self):
+        dim_expr_ok = True
+        for d in self.args:
+            resolve_ok = d.resolveType()
+            t = d.expr_type
+            if(resolve_ok != 'Correct' or t.typename != 'int'):
+                dim_expr_ok = False
+                break
+        if(dim_expr_ok):
+            dim_expr_len = len(self.args)
+            self.expr_type = Type(self.basetype, None, dim_expr_len)#combine dim_star and dim_expr's dimensions
+            return 'Correct'
+        self.expr_type = Type('error')
+        return 'Wrong'
+
+
+
+
