@@ -24,8 +24,6 @@ def print_ast():
 def check_type():
     for cid in classtable:
         c = classtable[cid]
-        if(c.builtin):
-            continue
         c.checkMethods()#check T1->S1 T2->S2, T1 strict dominate T2 or vise vesa
         c.resolveType()
 
@@ -142,7 +140,7 @@ class Type:
             elif (isinstance(basetype, Type)):#use an initialized type to create another Type object
                 self.kind = basetype.kind
                 if(self.kind == 'array'):
-                    self.basetype = basetype
+                    self.basetype = basetype.basetype
                 else:
                     self.typename = basetype.typename
             else:
@@ -151,7 +149,7 @@ class Type:
                     self.kind = 'user'
                 self.typename = basetype
         else:
-            bt = Type(basetype, params-1)
+            bt = Type(basetype, params=(params-1))
             self.kind = 'array'
             self.basetype = bt
 
@@ -310,6 +308,9 @@ class Variable:
 
     def printout(self):
         print "VARIABLE {0}, {1}, {2}, {3}".format(self.id, self.name, self.kind, self.type)
+    def resolveType(self):
+        self.expr_type = self.type
+        print "Variable type @@@@"
 
 #Statements only have synthetic type: "Correct" or "Wrong"
 #the resolveType() function will have 2 results
@@ -857,7 +858,7 @@ class NewArrayExpr(Expr):
                 break
         if(dim_expr_ok):
             dim_expr_len = len(self.args)
-            self.expr_type = Type(self.basetype, None, dim_expr_len)#combine dim_star and dim_expr's dimensions
+            self.expr_type = Type(self.basetype, params=dim_expr_len)#combine dim_star and dim_expr's dimensions
             return 'Correct'
         self.expr_type = Type('error')
         return 'Wrong'

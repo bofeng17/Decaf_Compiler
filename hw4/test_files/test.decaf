@@ -66,19 +66,17 @@ class nrfib{
     }
     void main() {
       int arr[][][];
-      int in[];
+   int in[][];
 
       arr = new int[10][][];
       arr[5] = new int[1][];
-
-
       in = new int[9][];
-      arr[5][0] = in;
+      arr[5] = in;
      
       arr[5][0][8] = 234;
       arr[5][0][0] = 0;
 
-      Out.print(arr[4+1][arr[5][0][0]][8], arr[5][0].length(), in.length());
+      Out.print(arr[2][3][1]);
     }
 }
 

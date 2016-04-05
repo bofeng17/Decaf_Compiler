@@ -60,6 +60,16 @@ def is_subtype(t1, t2, strict=False):
     return False
 
 
+def is_args_compatible(args1, args2):
+    if(len(args1) == len(args2)):
+        compatible = True
+        for a1, a2 in itertools.izip(args1, args2):
+            if(not(is_subtype(a1,a2, False)) or not (is_subtype(a2,a1,False)) ):
+                compatible = False
+                break
+        return compatible
+    return False
+
 
 def is_subtype_args(args1, args2, strict=False):
     if(len(args1) == len(args2)):
@@ -100,9 +110,9 @@ def check_methods(meths):
             if(m.name == check_m.name and (m is not check_m)):
                 check_m_types = check_m.vars.get_params_types()
                 m_types = m.vars.get_params_types()
-                if(len(m_types) != len(check_m_types)):
+                if(not is_args_compatible(m_types, check_m_types)):
                     continue
-                if(not (is_subtype_args(check_m_types, m_types, True) \
+                if(not(is_subtype_args(check_m_types, m_types, True) \
                         or is_subtype_args(m_types, check_m_types, True))):
                     print "overloading methods [{0}] ID \"{1}\" and \"{2}\" have conflict arg types".format(m.name, m.id, check_m.id)
                     print "arg1 type: {0}, arg2 type: {1}".format([t.kind for t in check_m_types], [t.kind for t in  m_types])
