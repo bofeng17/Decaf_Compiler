@@ -1136,7 +1136,7 @@ class NewArrayExpr(Expr):
     def __init__(self, basetype, args, lines):
         self.lines = lines
         self.basetype = basetype
-        self.args = args
+        self.args = args # [expr1, expr2, ...]
         self.__typeof = None
     def __repr__(self):
         return "New-array({0}, {1})".format(self.basetype, self.args)
@@ -1156,6 +1156,30 @@ class NewArrayExpr(Expr):
                     break
             self.__typeof = mytype
         return self.__typeof
+
+    # TODO:
+    def genCode(self):
+        self.t = generate_new_temp()
+        self.args.genCode()
+        self.code = [IR('halloc',[self.t,self.args.t],"NewArrayExpr")]
+        self.code = self.args.code + self.code
+
+t_reg_cnt = -1 # t_reg num starts from 0
+label_cnt = -1 # label num starts from 0
+
+def generate_new_temp(new_method=False):
+    global  t_reg_cnt
+    if new_method is True: # reset cnt
+        t_reg_cnt = -1
+        return
+    t_reg_cnt += 1
+    return 't'+t_reg_cnt
+
+def get_new_label():
+    global label_cnt
+    label_cnt += 1
+    return 'L'+label_cnt
+
 
 
 def signal_type_error(string, lineno):
