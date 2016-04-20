@@ -1,3 +1,4 @@
+from codegen import IR,Label
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
 lastconstructor = 0
@@ -692,12 +693,26 @@ class ConstantExpr(Expr):
                 self.__typeof = Type('boolean')
         return self.__typeof
 
+    def genCode(self):
+        self.t = generate_new_temp()
+        if(self.kind == 'int'):
+            self.code = [IR("move_immed_i", [self.t, self.int], "ConstantExpr")]
+        elif(self.kind == 'float'):
+            self.code = [IR("move_immed_f", [self.t, self.float], "ConstantExpr")]
+        elif(self.kind == 'True'):
+            self.code = [IR('jmp',[self.success],"ConstantExpr")]
+        elif(self.kind == 'False'):
+            self.code = [IR('jmp',[self.fail],"ConstantExpr")]
+        else:
+            signal_codegen_error("Don't support code gen for constant other than int and float", self.lines)
+
 
 class VarExpr(Expr):
     def __init__(self, var, lines):
         self.lines = lines
         self.var = var
         self.__typeof = None
+        self.addr = None
     def __repr__(self):
         return "Variable(%d)"%self.var.id
 
@@ -705,6 +720,12 @@ class VarExpr(Expr):
         if (self.__typeof == None):
             self.__typeof = self.var.type
         return self.__typeof
+
+    def genCode(self):
+        if(self.var.addr is None):
+            self.var.addr = generate_new_temp();
+        self.t = self.var.addr
+        self.code = [IR("",[], "VarExpr")]
 
 class UnaryExpr(Expr):
     def __init__(self, uop, expr, lines):
@@ -733,6 +754,29 @@ class UnaryExpr(Expr):
                     signal_type_error("Type error in unary negation expression: boolean expected, found {0}".format(str(argtype)), self.arg.lines)
         return self.__typeof
 
+    def genCode(self):
+        if(self.uop == 'uminus'): #ignore the negation case cuz we will use short circuit expression
+            self.arg.genCode()
+            self.t = generate_new_temp()
+            self.code = self.arg.code
+            if(self.arg.__typeof == Type('int')):
+                arg_0 = generate_new_temp()
+                ir = [IR('move_immed_i',[arg_0, 0],"UnaryExpr")]
+                ir += [IR('isub', [self.t, arg_0, self.arg.t],"UnaryExpr")]
+                self.code += ir
+            elif(self.arg.__typeof == Type('float')):
+                arg_0 = generate_new_temp()
+                ir = [IR('move_immed_f',[arg_0, 0],"UnaryExpr")]
+                ir += [IR('fsub', [self.t, arg_0, self.arg.t],"UnaryExpr")]
+                self.code += ir
+        else:
+            self.arg.fail = self.success
+            self.arg.success = self.fail
+            self.arg.genCode()
+            self.code = self.arg.code
+
+
+
 def signal_bop_error(argpos, bop, argtype, arg, possible_types, ptype_string):
     if (argtype.kind not in (['error'] + possible_types)):
         # not already in error
@@ -747,6 +791,79 @@ class BinaryExpr(Expr):
         self.__typeof = None
     def __repr__(self):
         return "Binary({0}, {1}, {2})".format(self.bop,self.arg1,self.arg2)
+
+    def genCode(self):
+        self.code = self.arg1.code + self.arg2.code
+        if(self.bop in ['add','sub','mul','div','lt','leq','gt','geq']):
+            self.arg1.genCode()
+            self.arg2.genCode()
+            self.t = generate_new_temp()
+            if(self.__typeof() == Type('int')):
+                opcode = 'i'+self.bop
+            elif(self.__typeof == Type('float')):
+                opcode = 'f'+self.bop
+            else:
+                signal_codegen_error('unknown type for code gen',self.lines)
+            oprandlist = [self.t, self.arg1.t, self.arg2.t]
+            comment = "BinaryExpr"
+            self.code += [IR(opcode, oprandlist, comment)]
+
+        elif(self.bop in ['and','or']):
+            if(self.bop == 'and'):
+                self.arg1.fail = self.fail
+                self.arg2.fail = self.fail
+                self.arg1.success = get_new_label()
+                self.arg2.success = self.success
+                self.arg1.genCode()
+                self.arg2.genCode()
+                self.code = self.arg1.code+\
+                    [Label(self.arg1.success,"BinaryExpr")]+\
+                    self.arg2.code
+            else:
+                self.arg1.success = self.success
+                self.arg2.success = self.success
+                self.arg1.fail = get_new_label()
+                self.arg2.fail = self.fail
+                self.code = self.arg1.code+\
+                    [Label(self.arg1.fail,"BinaryExpr")]+\
+                    self.arg2.code
+        else:
+            #equality and inequality
+            self.arg1.genCode()
+            self.arg2.genCode()
+            arg1type = self.arg1.typeof()
+            arg2type = self.arg2.typeof()
+            if(self.bop == '=='):
+                op = 'bz'
+                n_op = 'bnz'
+            else:
+                op = 'bnz'
+                n_op = 'bz'
+            self.code = self.arg1.code + self.arg2.code
+            result_reg = generate_new_temp()
+            if(arg1type.isnumeric() and arg2type.isnumeric()):
+                if(arg1type.isint() and (not arg2type.isint())):
+                    reg_f = generate_new_temp()
+                    self.code += [IR('itof',[reg_f,self.arg1.t],"BinaryExpr")]
+                    self.code += [IR('fsub',[result_reg,reg_f,self.arg2.t],"BinaryExpr")]
+                elif((not arg1type.isint()) and arg2type.isint()):
+                    reg_f = generate_new_temp()
+                    self.code += [IR('itof',[reg_f,self.arg2.t],"BinaryExpr")]
+                    self.code += [IR('fsub',[result_reg,reg_f,self.arg1.t],"BinaryExpr")]
+                else:
+                    #both int or both float
+                    if(arg1type.isint()):
+                        optype = 'i'
+                    else:
+                        optype = 'f'
+                    self.code += [IR(optype+'sub',[result_reg,self.arg1.t, self.arg2.t],"BinaryExpr")]
+                self.code += [IR(op, [result_reg, self.success],"BinaryExpr")]
+                self.code += [IR(n_op, [result_reg,self.fail],"BinaryExpr")]
+            else:
+                #TODO
+                pass
+
+
 
     def typeof(self):
         if (self.__typeof == None):
@@ -817,6 +934,20 @@ class AssignExpr(Expr):
                 self.__typeof = Type('error')
         return self.__typeof
 
+    def genCode(self):
+        self.rhs.genCode()
+        self.lhs.genCode()
+        self.t = self.rhs.t
+        if(self.lhs.mem == 'reg'):
+            ir = [IR('move', [self.lhs.at, self.rhs.t], "AssignExpr")]
+        else:
+            offset_r = generate_new_temp()
+            ir1 = [IR('move_immed_i', [offset_r, 0], "AssignExpr")]#a hack here, to comply with the format of hstore, we assign the offset to 0
+            ir2 = [IR('hstore', [self.lhs.at, offset_r, self.rhs.t], "AssignExpr")]
+            ir = ir1+ir2
+        self.code = self.lhs.lcode + self.rhs.code + ir
+
+
 class AutoExpr(Expr):
     def __init__(self, arg, oper, when, lines):
         self.lines = lines
@@ -837,6 +968,32 @@ class AutoExpr(Expr):
                 if (argtype.isok()):
                     signal_type_error('Type error in auto expression: int/float expected, found {0}'.format(str(argtype)), self.lines)
         return self.__typeof
+    def genCode(self):
+        self.arg.genCode()
+        self.t = generate_new_temp()
+        self.code = self.arg.code
+
+        if(self.arg.typeof().isint()):
+            f_or_i = 'i'
+        else:
+            f_or_i = 'f'
+
+        if(self.when == 'post'):
+            self.code += [IR('move', [self.t, self.arg.t], "AutoExpr")]
+            arg_1 = generate_new_temp()
+            self.code += [IR('move_immed_'+f_or_i, [arg_1, '1'],"AutoExpr")]
+            if(self.oper == 'inc'):
+                self.code += [IR(f_or_i+'add', [self.arg.t, self.arg.t, arg_1], "AutoExpr")]
+            else:
+                self.code += [IR(f_or_i+'sub', [self.arg.t, self.arg.t, arg_1], "AutoExpr")]
+        else:
+            arg_1 = generate_new_temp()
+            self.code += [IR('move_immed_'+f_or_i, [arg_1, '1'],"AutoExpr")]
+            if(self.oper == 'inc'):
+                self.code += [IR(f_or_i+'add', [self.arg.t, self.arg.t, arg_1], "AutoExpr")]
+            else:
+                self.code += [IR(f_or_i+'sub', [self.arg.t, self.arg.t, arg_1], "AutoExpr")]
+            self.code += [IR('move', [self.t, self.arg.t], "AutoExpr")]
 
 def find_applicable_methods(acc, baseclass, mname, argtypes):
     ms = []
@@ -970,6 +1127,20 @@ class FieldAccessExpr(Expr):
 
     def __repr__(self):
         return "Field-access({0}, {1}, {2})".format(self.base, self.fname, self.field.id)
+
+    def genCode(self):
+        self.at = generate_new_temp()
+        self.offset = generate_new_temp()
+        self.base.genCode()
+        self.field.genCode()#TODO
+        self.base_loc = self.base.t
+        self.lcode = self.base.rcode + \
+            [IR('move_immed_i', [self.offset,self.field.offset],"FieldAccessExpr")]+\
+            [IR('iadd',[self.at, self.base_loc, self.offset],"FieldAccessExpr")]
+        self.t = generate_new_temp()
+        self.rcode = self.lcode + \
+            [IR('hload', [self.t, self.base_loc, self.offset], "FieldAccessExpr")]
+        self.mem = relative
 
     def typeof(self):
         if (self.__typeof == None):
@@ -1159,6 +1330,11 @@ class NewArrayExpr(Expr):
 
 
 def signal_type_error(string, lineno):
+    global errorflag
+    print "{1}: {0}".format(string, lineno)
+    errorflag = True
+
+def signal_codegen_error(string, lineno):
     global errorflag
     print "{1}: {0}".format(string, lineno)
     errorflag = True
