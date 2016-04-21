@@ -3,6 +3,9 @@ classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
 lastconstructor = 0
 
+
+loopbodyscope = []#when ever we visit a loop ast node, we push its (s.begin, s.end) into this stack
+                  #after we generate the code for that loop ast node, we pop its tuple out
 # Class table.  Only user-defined classes are placed in the class table.
 def lookup(table, key):
     if key in table:
@@ -395,6 +398,7 @@ class Variable:
         self.id = id
         self.kind = vkind
         self.type = vtype
+        self.addr = None
 
     def printout(self):
         print "VARIABLE {0}, {1}, {2}, {3}".format(self.id, self.name, self.kind, self.type)
@@ -410,6 +414,7 @@ class IfStmt(Stmt):
         self.thenpart = thenpart
         self.elsepart = elsepart
         self.__typecorrect = None
+        self.end = None
 
     def printout(self):
         print "If(",
@@ -429,6 +434,22 @@ class IfStmt(Stmt):
             self.__typecorrect = b.isboolean() and self.thenpart.typecheck() and self.elsepart.typecheck()
         return self.__typecorrect
 
+    def genCode(self):
+        self.end = get_new_label()#tell upper layer to generate a explicit label
+        self.condition.true = get_new_label()
+        self.condition.false = get_new_label()
+        self.thenpart.end = self.elsepart.end = self.end
+        self.condition.genCode()
+        self.thenpart.genCode()
+        self.elsepart.genCode()
+        self.code = self.condition.code +\
+            [Label(self.condition.true, "IfStmt")]+\
+            self.thenpart.code+\
+            [IR('jmp',[self.end],"IfStmt")]+\
+            [Label(self.condition.false,"IfStmt")]+\
+            self.elsepart.code
+
+
     def has_return(self):
         # 0 if none, 1 if at least one path has a return, 2 if all paths have a return
         r = self.thenpart.has_return() + self.elsepart.has_return()
@@ -445,6 +466,8 @@ class WhileStmt(Stmt):
         self.cond = cond
         self.body = body
         self.__typecorrect = None
+        self.end = None
+        self.begin = None
 
     def printout(self):
         print "While(",
@@ -452,6 +475,25 @@ class WhileStmt(Stmt):
         print ", ",
         self.body.printout()
         print ")"
+
+    def genCode(self):
+        self.begin = get_new_label()
+        self.cond.true = get_new_label()
+        self.end = get_new_label()#tell uppper layer to explicit emit this label
+        self.cond.false = self.end
+        self.cond.genCode()
+        self.body.end = self.begin
+        global loopbodyscope
+        loopbodyscope.insert(0, (self.begin,self.end))
+        self.body.genCode()
+
+        self.code = [Label(self.begin, "WhileStmt")]+\
+            self.cond.code +\
+            [Label(self.cond.true,"WhileStmt")]+\
+            self.body.code+\
+            [IR('jmp',[self.begin],"WhileStmt")]
+        loopbodyscope.pop(0)
+
 
     def typecheck(self):
         if (self.__typecorrect == None):
@@ -477,6 +519,9 @@ class ForStmt(Stmt):
         self.update = update
         self.body = body
         self.__typecorrect = None
+        self.end = None
+        self.condlabel = None
+        self.bodylabel = None
 
     def printout(self):
         print "For(",
@@ -491,6 +536,28 @@ class ForStmt(Stmt):
         print ", ",
         self.body.printout()
         print ")"
+
+    def genCode(self):
+        self.condlabel = get_new_label()
+        self.bodylabel = get_new_label()
+        self.cond.true = self.bodylabel
+        self.end = get_new_label()
+        self.cond.false = self.end
+
+        self.cond.genCode()
+        self.init.genCode()
+        global loopbodyscope
+        loopbodyscope.insert(0, (self.begin,self.end))
+        self.body.genCode()
+        self.update.genCode()
+
+        self.code = self.init.code +\
+            [Label(self.condlabel,"ForStmt")]+\
+            self.cond.code+\
+            [Label(self.bodylabel,"ForStmt")]+\
+            self.body.code+\
+            self.update.code
+        loopbodyscope.pop(0)
 
     def typecheck(self):
         if (self.__typecorrect == None):
@@ -521,6 +588,7 @@ class ReturnStmt(Stmt):
         self.lines = lines
         self.expr = expr
         self.__typecorrect = None
+        self.end = None
 
     def printout(self):
         print "Return(",
@@ -548,6 +616,7 @@ class BlockStmt(Stmt):
         self.lines = lines
         self.stmtlist = [s for s in stmtlist if (s != None) and (not isinstance(s, SkipStmt))]
         self.__typecorrect = None
+        self.end = None
 
     def printout(self):
         print "Block(["
@@ -557,6 +626,15 @@ class BlockStmt(Stmt):
             print ", ",
             s.printout()
         print "])"
+
+    def genCode(self):
+        for s in self.stmtlist:
+            s.end = "fallthrough"
+            s.genCode()
+            if(s.end == "fallthrough"):
+                self.code += s.code
+            else:#the s need an explicit label
+                self.code += s.code + [Label(s.end,"BlockStmt")]
 
     def typecheck(self):
         if (self.__typecorrect == None):
@@ -576,6 +654,14 @@ class BreakStmt(Stmt):
     def __init__(self, lines):
         self.lines = lines
         self.__typecorrect = True
+        self.end = None
+
+    def genCode(self):
+        global loopbodyscope
+        if (len(loopbodyscope) == 0):
+            signal_codegen_error("you are not executing break/continue in a loop body", self.lines)
+        self.end = loopbodyscope[0][1]
+        self.code = [IR('jmp',[self.end],"BreakStmt")]
 
     def printout(self):
         print "Break"
@@ -590,6 +676,8 @@ class ContinueStmt(Stmt):
     def __init__(self, lines):
         self.lines = lines
         self.__typecorrect = True
+        self.end = None
+        self.begin = None
 
     def printout(self):
         print "Continue"
@@ -600,12 +688,19 @@ class ContinueStmt(Stmt):
     def has_return(self):
         return 0
 
+    def genCode(self):
+        global loopbodyscope
+        if (len(loopbodyscope) == 0):
+            signal_codegen_error("you are not executing break/continue in a loop body", self.lines)
+        self.begin = loopbodyscope[0][0]
+        self.code = [IR('jmp',[self.begin],"BreakStmt")]
 
 class ExprStmt(Stmt):
     def __init__(self, expr, lines):
         self.lines = lines
         self.expr = expr
         self.__typecorrect = None
+        self.end = None
 
     def printout(self):
         print "Expr(",
@@ -620,6 +715,10 @@ class ExprStmt(Stmt):
                 self.__typecorrect = True
         return self.__typecorrect
 
+    def genCode(self):
+        self.expr.genCode()
+        self.code = self.expr.code
+
     def has_return(self):
         return 0
 
@@ -628,6 +727,7 @@ class SkipStmt(Stmt):
     def __init__(self, lines):
         self.lines = lines
         self.__typecorrect = True
+        self.end = None
 
     def printout(self):
         print "Skip"
@@ -638,6 +738,8 @@ class SkipStmt(Stmt):
     def has_return(self):
         return 0
 
+    def genCode(self):
+        self.code = [IR('',[],"SkipStmt")]
 
 
 class Expr(object):
