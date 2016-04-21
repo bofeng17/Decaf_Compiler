@@ -321,7 +321,7 @@ class Method:
         for v in localvars:
             v.addr = generate_new_temp()
         self.body.genCode()
-        self.code = [Label("M_{0}_{1}".format(self.name, self.id),"Method")]
+        self.code = [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
         self.code += self.body.code
 
     def printCode(self):
@@ -350,7 +350,7 @@ class Constructor:
         for v in localvars:
             v.addr = generate_new_temp()
         self.body.genCode()
-        self.code = [Label("C_{0}_{1}".format(self.name, self.id),"Constructor")]
+        self.code = [Label("C_{0}".format(self.id),"Constructor", indent=0)]
         self.code += self.body.code
 
     def printCode(self):
@@ -597,6 +597,9 @@ class ForStmt(Stmt):
             self.end = get_new_label()
         self.cond.false = self.end
         self.cond.true = self.bodylabel
+
+        self.begin = self.condlabel
+
         self.cond.genCode()
         self.init.genCode()
         global loopbodyscope
@@ -722,8 +725,7 @@ class BreakStmt(Stmt):
         global loopbodyscope
         if (len(loopbodyscope) == 0):
             signal_codegen_error("you are not executing break/continue in a loop body", self.lines)
-        self.end = loopbodyscope[0][1]
-        self.code = [IR('jmp',[self.end],"BreakStmt")]
+        self.code = [IR('jmp',[loopbodyscope[0][1]],"BreakStmt")]
 
     def printout(self):
         print "Break"
@@ -755,7 +757,7 @@ class ContinueStmt(Stmt):
         if (len(loopbodyscope) == 0):
             signal_codegen_error("you are not executing break/continue in a loop body", self.lines)
         self.begin = loopbodyscope[0][0]
-        self.code = [IR('jmp',[self.begin],"BreakStmt")]
+        self.code = [IR('jmp',[self.begin],"ContinueStmt")]
 
 class ExprStmt(Stmt):
     def __init__(self, expr, lines):
@@ -963,40 +965,36 @@ class BinaryExpr(Expr):
             self.arg2.genCode()
             arg1type = self.arg1.typeof()
             arg2type = self.arg2.typeof()
-            self.t = generate_new_temp()
             if(arg1type.isnumeric() and arg2type.isnumeric()):
                 if(arg1type.isint() and (not arg2type.isint())):
-                    reg_f = generate_new_temp()
-                    self.code += [IR('itof',[reg_f,self.arg1.t],"BinaryExpr")]
+                    reg_1_convert = generate_new_temp()
+                    reg_2_convert = self.arg2.t
+                    self.code += [IR('itof',[reg_1_convert,self.arg1.t],"BinaryExpr")]
+                    optype = 'f'
                 elif((not arg1type.isint()) and arg2type.isint()):
-                    reg_f = generate_new_temp()
-                    self.code += [IR('itof',[reg_f,self.arg2.t],"BinaryExpr")]
+                    reg_1_convert = self.arg1.t
+                    reg_2_convert = generate_new_temp()
+                    self.code += [IR('itof',[reg_2_convert,self.arg2.t],"BinaryExpr")]
+                    optype = 'f'
                 else:
                     #both int or both float
+                    reg_1_convert = self.arg1.t
+                    reg_2_convert = self.arg2.t
                     if(arg1type.isint()):
                         optype = 'i'
                     else:
                         optype = 'f'
-                    self.code += [IR(optype+'sub',[result_reg,self.arg1.t, self.arg2.t],"BinaryExpr")]
-                self.code += [IR(op, [result_reg, self.true],"BinaryExpr")]
-                self.code += [IR(n_op, [result_reg,self.false],"BinaryExpr")]
 
-
-
-
-            if(self.__typeof == Type('int')):
-                opcode = 'i'+self.bop
-            elif(self.__typeof == Type('float')):
-                opcode = 'f'+self.bop
-            else:
-                signal_codegen_error('unknown type for code gen',self.lines)
-
-
-
-            oprandlist = [self.t, self.arg1.t, self.arg2.t]
-            comment = "BinaryExpr"
-            self.code = self.arg1.code + self.arg2.code
-            self.code += [IR(opcode, oprandlist, comment)]
+            result_reg = generate_new_temp()
+            if(self.bop in ['add','sub','mul','div']):
+                self.t = result_reg
+                self.code = self.arg1.code + self.arg2.code
+                self.code += [IR(optype+self.bop,[self.t, reg_1_convert, reg_2_convert],"BinaryExpr")]
+            else:#boolean expressions
+                self.code = self.arg1.code + self.arg2.code
+                self.code += [IR(optype+self.bop,[result_reg, reg_1_convert, reg_2_convert],"BinaryExpr")]
+                self.code += [IR('bnz', [result_reg, self.true],"BinaryExpr")]
+                self.code += [IR('bz', [result_reg,self.false],"BinaryExpr")]
 
         elif(self.bop in ['and','or']):
             if(self.bop == 'and'):

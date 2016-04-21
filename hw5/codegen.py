@@ -7,15 +7,16 @@ class IR():
         self.comment = comment
     def __str__(self):
         self.operandList = [str(x) for x in self.operandList]
-        return "    {0} {1}{2:>80}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
+        return "        {0} {1}{2:>80}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
 
 class Label():
-    def __init__(self, label_name, comment=""):
+    def __init__(self, label_name, comment="", indent=4):
         self.label_name = label_name
         self.comment = comment
+        self.indent = indent
     def __str__(self):
-        return "{0}:{1:>80}".format(self.label_name, '#'+self.comment)
+        return self.indent*" "+"{0}:{1:>80}".format(self.label_name, '#'+self.comment)
 
 def emit_code():
     absmc.g_scan_static()
