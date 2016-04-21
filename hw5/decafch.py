@@ -8,16 +8,17 @@ import getopt
 
 import decafparser
 import ast
+import codegen
 
 class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-    
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv
-        
+
     # parse command line options
     try:
         try:
@@ -39,7 +40,10 @@ def main(argv=None):
         ast.initialize_ast()
         if decafparser.from_file(infile):
             if (ast.typecheck()):
-                ast.print_ast()            
+                # ast.print_ast()
+                pass
+            if (codegen.emit_code()):
+                pass
         else:
             print "Failure: there were errors."
     except Usage, err:

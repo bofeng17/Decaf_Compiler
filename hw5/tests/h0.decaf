@@ -1,27 +1,15 @@
 class A {
-   public int x;
+   public static int x;
    public A () {
-     this.x = 0;
+        int a;
+        a=0;
    }
-   public int f() {
-      return this.x + 1;
-   }
-   public int g() {
-      int i;
-      i = this.f();
-      i++;
-      return i;
-   }
-}
-class B extends A {
-   static A a;
-   int y;
-   public A s;
-   public B () {
-     this.y = 2;
-     this.s = new A();
-   }
-   public int f(int k) {
-      return super.f() + k + this.x;
+   public int m () {
+        int b;
+        b= 1;
+        if(b == 1 && b < 10){
+            b = 2;
+        }
+        return b;
    }
 }

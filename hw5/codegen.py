@@ -1,10 +1,13 @@
+import ast
+import absmc
 class IR():
     def __init__(self, opcode, operandList, comment=""):
         self.opcode = opcode
         self.operandList = operandList
         self.comment = comment
     def __str__(self):
-        return "{0} {1}#{2}\n".format(self.opcode, ', '.join(self.operandList),self.comment)
+        self.operandList = [str(x) for x in self.operandList]
+        return "    {0} {1}{2:>80}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
 
 class Label():
@@ -12,5 +15,14 @@ class Label():
         self.label_name = label_name
         self.comment = comment
     def __str__(self):
-        return "{0}: #{1}\n".format(self.label_name, self.comment)
+        return "{0}:{1:>80}".format(self.label_name, '#'+self.comment)
 
+def emit_code():
+    absmc.g_scan_static()
+    absmc.g_obtain_cls_layouts()
+    print ".static_area "+str(absmc.static_area[0])
+    for cid in ast.classtable:
+        c = ast.classtable[cid]
+        if(not c.builtin):
+            c.genCode()
+            c.printCode()

@@ -23,6 +23,8 @@ def print_ast():
         c.printout()
     print "-----------------------------------------------------------------------------"
 
+
+
 def typecheck():
     global errorflag
     errorflag = False
@@ -107,6 +109,16 @@ class Class:
         for m in self.methods:
             m.printout()
 
+    def genCode(self):
+        for c in self.constructors:
+            c.genCode()
+        for m in self.methods:
+            m.genCode()
+    def printCode(self):
+        for c in self.constructors:
+            c.printCode()
+        for m in self.methods:
+            m.printCode()
     def typecheck(self):
         global current_class
         if (self.builtin):
@@ -303,6 +315,19 @@ class Method:
         current_method = self
         self.body.typecheck()
 
+    def genCode(self):
+        generate_new_temp(True)
+        localvars = self.vars.get_locals()
+        for v in localvars:
+            v.addr = generate_new_temp()
+        self.body.genCode()
+        self.code = [Label("M_{0}_{1}".format(self.name, self.id),"Method")]
+        self.code += self.body.code
+
+    def printCode(self):
+        for i_or_l in self.code:
+            print i_or_l
+
 class Constructor:
     """A class encoding constructors and their attributes in Decaf"""
     def __init__(self, cname, visibility):
@@ -318,6 +343,19 @@ class Constructor:
 
     def add_var(self, vname, vkind, vtype):
         self.vars.add_var(vname, vkind, vtype)
+
+    def genCode(self):
+        generate_new_temp(True)
+        localvars = self.vars.get_locals()
+        for v in localvars:
+            v.addr = generate_new_temp()
+        self.body.genCode()
+        self.code = [Label("C_{0}_{1}".format(self.name, self.id),"Constructor")]
+        self.code += self.body.code
+
+    def printCode(self):
+        for i_or_l in self.code:
+            print i_or_l
 
     def printout(self):
         print "CONSTRUCTOR: {0}, {1}".format(self.id, self.visibility)
@@ -383,6 +421,15 @@ class VarTable:
         vars_ids.sort()
         return [v for (i,v) in vars_ids]   # in their order of definition!
 
+    def get_locals(self):
+        ret = []
+        for b in range(self.lastblock+1):
+            for vname in self.vars[b]:
+                v = self.vars[b][vname]
+                if(v.kind == 'local'):
+                    ret += [v]
+        return ret
+
     def printout(self):
         print "Variable Table:"
         for b in range(self.lastblock+1):
@@ -402,6 +449,7 @@ class Variable:
 
     def printout(self):
         print "VARIABLE {0}, {1}, {2}, {3}".format(self.id, self.name, self.kind, self.type)
+
 
 
 class Stmt(object):
@@ -435,7 +483,8 @@ class IfStmt(Stmt):
         return self.__typecorrect
 
     def genCode(self):
-        self.end = get_new_label()#tell upper layer to generate a explicit label
+        if(self.end == "fallthrough" or self.end == None):
+            self.end = get_new_label()#tell upper layer to generate a explicit label
         self.condition.true = get_new_label()
         self.condition.false = get_new_label()
         self.thenpart.end = self.elsepart.end = self.end
@@ -479,7 +528,8 @@ class WhileStmt(Stmt):
     def genCode(self):
         self.begin = get_new_label()
         self.cond.true = get_new_label()
-        self.end = get_new_label()#tell uppper layer to explicit emit this label
+        if(self.end == "fallthrough" or self.end == None):
+            self.end = get_new_label()#tell upper layer to generate a explicit label
         self.cond.false = self.end
         self.cond.genCode()
         self.body.end = self.begin
@@ -522,6 +572,7 @@ class ForStmt(Stmt):
         self.end = None
         self.condlabel = None
         self.bodylabel = None
+        self.updatelabel = None
 
     def printout(self):
         print "For(",
@@ -541,13 +592,17 @@ class ForStmt(Stmt):
         self.condlabel = get_new_label()
         self.bodylabel = get_new_label()
         self.cond.true = self.bodylabel
-        self.end = get_new_label()
+        # self.end = get_new_label()
+        if(self.end == "fallthrough" or self.end == None):
+            self.end = get_new_label()
         self.cond.false = self.end
-
+        self.cond.true = self.bodylabel
         self.cond.genCode()
         self.init.genCode()
         global loopbodyscope
         loopbodyscope.insert(0, (self.begin,self.end))
+        self.updatelabel = get_new_label()
+        self.body.end = self.updatelabel
         self.body.genCode()
         self.update.genCode()
 
@@ -556,7 +611,9 @@ class ForStmt(Stmt):
             self.cond.code+\
             [Label(self.bodylabel,"ForStmt")]+\
             self.body.code+\
-            self.update.code
+            [Label(self.updatelabel,"ForStmt")]+\
+            self.update.code+\
+            [IR('jmp',[self.condlabel],"ForStmt")]
         loopbodyscope.pop(0)
 
     def typecheck(self):
@@ -596,6 +653,10 @@ class ReturnStmt(Stmt):
             self.expr.printout()
         print ")"
 
+    def genCode(self):
+        self.expr.genCode()
+        self.code = self.expr.code+\
+            [IR('move',['a0',self.expr.t],"ReturnStmt")]
     def typecheck(self):
         global current_method
         if (self.__typecorrect == None):
@@ -617,6 +678,7 @@ class BlockStmt(Stmt):
         self.stmtlist = [s for s in stmtlist if (s != None) and (not isinstance(s, SkipStmt))]
         self.__typecorrect = None
         self.end = None
+        self.code = []
 
     def printout(self):
         print "Block(["
@@ -798,13 +860,13 @@ class ConstantExpr(Expr):
     def genCode(self):
         self.t = generate_new_temp()
         if(self.kind == 'int'):
-            self.code = [IR("move_immed_i", [self.t, self.int], "ConstantExpr")]
+            self.code = [IR("move_immed_i", [self.t, str(self.int)], "ConstantExpr")]
         elif(self.kind == 'float'):
-            self.code = [IR("move_immed_f", [self.t, self.float], "ConstantExpr")]
+            self.code = [IR("move_immed_f", [self.t, str(self.float)], "ConstantExpr")]
         elif(self.kind == 'True'):
-            self.code = [IR('jmp',[self.success],"ConstantExpr")]
+            self.code = [IR('jmp',[self.true],"ConstantExpr")]
         elif(self.kind == 'False'):
-            self.code = [IR('jmp',[self.fail],"ConstantExpr")]
+            self.code = [IR('jmp',[self.false],"ConstantExpr")]
         else:
             signal_codegen_error("Don't support code gen for constant other than int and float", self.lines)
 
@@ -815,6 +877,7 @@ class VarExpr(Expr):
         self.var = var
         self.__typeof = None
         self.addr = None
+        self.mem = None
     def __repr__(self):
         return "Variable(%d)"%self.var.id
 
@@ -824,10 +887,10 @@ class VarExpr(Expr):
         return self.__typeof
 
     def genCode(self):
-        if(self.var.addr is None):
-            self.var.addr = generate_new_temp();
+        self.mem = 'reg'
         self.t = self.var.addr
-        self.code = [IR("",[], "VarExpr")]
+        self.addr = self.t
+        self.lcode = self.code = []
 
 class UnaryExpr(Expr):
     def __init__(self, uop, expr, lines):
@@ -872,8 +935,8 @@ class UnaryExpr(Expr):
                 ir += [IR('fsub', [self.t, arg_0, self.arg.t],"UnaryExpr")]
                 self.code += ir
         else:
-            self.arg.fail = self.success
-            self.arg.success = self.fail
+            self.arg.false = self.true
+            self.arg.true = self.false
             self.arg.genCode()
             self.code = self.arg.code
 
@@ -895,39 +958,64 @@ class BinaryExpr(Expr):
         return "Binary({0}, {1}, {2})".format(self.bop,self.arg1,self.arg2)
 
     def genCode(self):
-        self.code = self.arg1.code + self.arg2.code
         if(self.bop in ['add','sub','mul','div','lt','leq','gt','geq']):
             self.arg1.genCode()
             self.arg2.genCode()
+            arg1type = self.arg1.typeof()
+            arg2type = self.arg2.typeof()
             self.t = generate_new_temp()
-            if(self.__typeof() == Type('int')):
+            if(arg1type.isnumeric() and arg2type.isnumeric()):
+                if(arg1type.isint() and (not arg2type.isint())):
+                    reg_f = generate_new_temp()
+                    self.code += [IR('itof',[reg_f,self.arg1.t],"BinaryExpr")]
+                elif((not arg1type.isint()) and arg2type.isint()):
+                    reg_f = generate_new_temp()
+                    self.code += [IR('itof',[reg_f,self.arg2.t],"BinaryExpr")]
+                else:
+                    #both int or both float
+                    if(arg1type.isint()):
+                        optype = 'i'
+                    else:
+                        optype = 'f'
+                    self.code += [IR(optype+'sub',[result_reg,self.arg1.t, self.arg2.t],"BinaryExpr")]
+                self.code += [IR(op, [result_reg, self.true],"BinaryExpr")]
+                self.code += [IR(n_op, [result_reg,self.false],"BinaryExpr")]
+
+
+
+
+            if(self.__typeof == Type('int')):
                 opcode = 'i'+self.bop
             elif(self.__typeof == Type('float')):
                 opcode = 'f'+self.bop
             else:
                 signal_codegen_error('unknown type for code gen',self.lines)
+
+
+
             oprandlist = [self.t, self.arg1.t, self.arg2.t]
             comment = "BinaryExpr"
+            self.code = self.arg1.code + self.arg2.code
             self.code += [IR(opcode, oprandlist, comment)]
 
         elif(self.bop in ['and','or']):
             if(self.bop == 'and'):
-                self.arg1.fail = self.fail
-                self.arg2.fail = self.fail
-                self.arg1.success = get_new_label()
-                self.arg2.success = self.success
+                self.arg1.false = self.false
+                self.arg2.false = self.false
+                self.arg1.true = get_new_label()
+                self.arg2.true = self.true
                 self.arg1.genCode()
                 self.arg2.genCode()
                 self.code = self.arg1.code+\
-                    [Label(self.arg1.success,"BinaryExpr")]+\
+                    [Label(self.arg1.true,"BinaryExpr")]+\
                     self.arg2.code
             else:
-                self.arg1.success = self.success
-                self.arg2.success = self.success
-                self.arg1.fail = get_new_label()
-                self.arg2.fail = self.fail
+                self.arg1.true = self.true
+                self.arg2.true = self.true
+                self.arg1.false = get_new_label()
+                self.arg2.false = self.false
                 self.code = self.arg1.code+\
-                    [Label(self.arg1.fail,"BinaryExpr")]+\
+                    [Label(self.arg1.false,"BinaryExpr")]+\
                     self.arg2.code
         else:
             #equality and inequality
@@ -935,7 +1023,7 @@ class BinaryExpr(Expr):
             self.arg2.genCode()
             arg1type = self.arg1.typeof()
             arg2type = self.arg2.typeof()
-            if(self.bop == '=='):
+            if(self.bop == 'eq'):
                 op = 'bz'
                 n_op = 'bnz'
             else:
@@ -959,8 +1047,8 @@ class BinaryExpr(Expr):
                     else:
                         optype = 'f'
                     self.code += [IR(optype+'sub',[result_reg,self.arg1.t, self.arg2.t],"BinaryExpr")]
-                self.code += [IR(op, [result_reg, self.success],"BinaryExpr")]
-                self.code += [IR(n_op, [result_reg,self.fail],"BinaryExpr")]
+                self.code += [IR(op, [result_reg, self.true],"BinaryExpr")]
+                self.code += [IR(n_op, [result_reg,self.false],"BinaryExpr")]
             else:
                 #TODO
                 pass
@@ -1041,12 +1129,13 @@ class AssignExpr(Expr):
         self.lhs.genCode()
         self.t = self.rhs.t
         if(self.lhs.mem == 'reg'):
-            ir = [IR('move', [self.lhs.at, self.rhs.t], "AssignExpr")]
+            ir = [IR('move', [self.lhs.addr, self.rhs.t], "AssignExpr")]
         else:
             offset_r = generate_new_temp()
             ir1 = [IR('move_immed_i', [offset_r, 0], "AssignExpr")]#a hack here, to comply with the format of hstore, we assign the offset to 0
-            ir2 = [IR('hstore', [self.lhs.at, offset_r, self.rhs.t], "AssignExpr")]
+            ir2 = [IR('hstore', [self.lhs.addr, offset_r, self.rhs.t], "AssignExpr")]
             ir = ir1+ir2
+        #TODO: add lcode to varExpr, fieldaccexpr, arrayaccexpr
         self.code = self.lhs.lcode + self.rhs.code + ir
 
 
@@ -1446,12 +1535,12 @@ def generate_new_temp(new_method=False):
         t_reg_cnt = -1
         return
     t_reg_cnt += 1
-    return 't'+t_reg_cnt
+    return 't'+str(t_reg_cnt)
 
 def get_new_label():
     global label_cnt
     label_cnt += 1
-    return 'L'+label_cnt
+    return 'L'+str(label_cnt)
 
 
 

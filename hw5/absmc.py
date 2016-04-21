@@ -41,7 +41,8 @@ def build_layout(cls_tree):
     ret = [0,{}]
     for cur_cls in cls_tree:
         f_list = cur_cls.fields
-        for f in f_list:
+        for f_id in f_list:
+            f = f_list[f_id]
             if(f.storage != "static"):
                 ret[1].update({f.id:ret[0]})
                 ret[0] += 1
