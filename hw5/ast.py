@@ -1517,12 +1517,42 @@ class NewArrayExpr(Expr):
             self.__typeof = mytype
         return self.__typeof
 
-    # TODO:
     def genCode(self):
+        cmt = "NewArrayExpr"
+        self.code = []
+        for arg in self.args:
+            arg.genCode()
+            self.code += arg.code
+
         self.t = generate_new_temp()
-        self.args.genCode()
-        self.code = [IR('halloc',[self.t,self.args.t],"NewArrayExpr")]
-        self.code = self.args.code + self.code
+        dec_reg = generate_new_temp() # dec loop control var
+            
+        offset = {} # store offset reg used for each dim
+        base = {0:self.t} # store base reg used for each dim
+        label = {} # store label used for each dim
+        code = {0:[]}
+            
+        code[0].append([IR('halloc',[base[0],self.args[0].t],cmt),IR('move_immed_i',[dec_reg,1],cmt)])
+        code[0].append([]) # to be consistent
+        for i in range(1,len(self.args)):
+            offset[i-1] = generate_new_temp()
+            base[i] = generate_new_temp()
+            label[i] = Label(get_new_label(),cmt)
+            code[i] = []
+            code[i].append([ \
+                IR('move_immed_i',[offset[i-1],self.args[i-1].t],cmt), \
+                IR('isub',[offset[i-1],offset[i-1],dec_reg],cmt), \
+                label[i], \
+                IR('halloc',[base[i],self.args[i].t],cmt), \
+                IR('hstore',[base[i-1],offset[i-1],base[i]],cmt), \
+                ])
+            code[i].append([IR('jnz',[label[i]],cmt)])
+
+        tmp = []
+        for i in range(0,len(self.args)).reverse():
+            tmp = code[i][0] + tmp + code[i][1]
+
+        self.code += tmp
 
 t_reg_cnt = -1 # t_reg num starts from 0
 label_cnt = -1 # label num starts from 0
