@@ -1344,11 +1344,15 @@ class FieldAccessExpr(Expr):
         self.lcode = self.base.code
         if(self.field.storage == 'static'):
             offset = str(static_area[1][self.field.id])
-            ir = [IR('iadd',[self.addr, 'sap', offset],"FieldAccessExpr")]
+            reg_offset = generate_new_temp()
+            reg_ir = [IR('move_immed_i',[reg_offset, offset],"FieldAccessExpr")]
+            ir = reg_ir + [IR('iadd',[self.addr, 'sap', reg_offset],"FieldAccessExpr")]
             base = 'sap'
         else:
             offset = str(class_layouts[self.field.inclass.name][1][self.field.id])
-            ir = [IR('iadd',[self.addr, self.base.t, offset], "FieldAccessExpr")]
+            reg_offset = generate_new_temp()
+            reg_ir = [IR('move_immed_i',[reg_offset, offset],"FieldAccessExpr")]
+            ir = reg_ir + [IR('iadd',[self.addr, self.base.t, reg_offset], "FieldAccessExpr")]
             base = self.base.t
         self.lcode += ir
         self.t = generate_new_temp()
