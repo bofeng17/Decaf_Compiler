@@ -1,4 +1,5 @@
 from codegen import IR,Label
+from absmc import class_layouts
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
 lastconstructor = 0
@@ -1399,6 +1400,43 @@ class MethodInvocationExpr(Expr):
                         self.__typeof = Type('error')
         return self.__typeof
 
+    def genCode(self):
+        cmt = 'MethodInvocationExpr'
+        self.t = generate_new_temp()
+        self.code = []
+        self.base.genCode()
+        self.code += self.base.code
+        for arg in self.args:
+            arg.genCode()
+            self.code += arg.code
+
+        save_a = []
+        save_t = []
+        move_a = []
+        rest_a = []
+        rest_t = []
+        if self.base.typeof().kind == 'user':
+            # instance method
+            s = 1 # shift
+            move_a.append(IR('move',['a0',self.base.t],cmt))
+        else:
+            # static method
+            s = 0
+
+        for i in range(0,len(self.args)):
+            save_a.append(IR('save',['a%d'%(i+s)],cmt))
+            move_a.append(IR('move',['a%d'%(i+s),self.args[i].t],cmt))
+            rest_a.append(IR('restore',['a%d'%(len(self.args)-1-i+s)],cmt))
+
+        global t_reg_cnt
+        for i in range(0,t_reg_cnt+1): # save s_0 - s_t_reg_cnt
+            save_t.append(IR('save',['t%d'%i],cmt))
+            rest_t.append(IR('restore',['t%d'%(t_reg_cnt-i)],cmt))
+
+        self.code += save_a+save_t+move_a+[IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt),\
+                     IR('move',[self.t,'a0'],cmt)]+rest_t+rest_a
+
+
 class NewObjectExpr(Expr):
     def __init__(self, cref, args, lines):
         self.lines = lines
@@ -1423,6 +1461,35 @@ class NewObjectExpr(Expr):
                 # type error in some argument; already signaled before
                 self.__typeof = Type('error')
         return self.__typeof
+
+    def genCode(self):
+        cmt = 'NewObjectExpr'
+        self.t = generate_new_temp()
+        self.code = [IR('halloc',[self.t,class_layouts[self.classref.name][0]],cmt)]
+        for arg in self.args:
+            arg.genCode()
+            self.code += arg.code
+
+        save_a = []
+        save_t = []
+        move_a = []
+        rest_a = []
+        rest_t = []
+        # ctor is regarded as instance method
+        s = 1 # shift
+        move_a.append(IR('move',['a0',self.t],cmt))
+
+        for i in range(0,len(self.args)):
+            save_a.append(IR('save',['a%d'%(i+s)],cmt))
+            move_a.append(IR('move',['a%d'%(i+s),self.args[i].t],cmt))
+            rest_a.append(IR('restore',['a%d'%(len(self.args)-1-i+s)],cmt))
+
+        global t_reg_cnt
+        for i in range(0,t_reg_cnt+1): # save s_0 - s_t_reg_cnt
+            save_t.append(IR('save',['t%d'%i],cmt))
+            rest_t.append(IR('restore',['t%d'%(t_reg_cnt-i)],cmt))
+
+        self.code += save_a+save_t+move_a+[IR('call',['C_%d'%self.constructor.id],cmt)]+rest_t+rest_a
 
 
 class ThisExpr(Expr):
@@ -1491,10 +1558,13 @@ class ArrayAccessExpr(Expr):
         return self.__typeof
 
     def genCode(self):
-        self.t = generate_new_temp()
         self.base.genCode()
         self.index.genCode()
+        self.addr = generate_new_temp()
+        self.lcode = self.base.code + self.index.code + [IR('iadd',[self.addr,self.base.t,self.index.t],"ArrayAccessExpr")]
+        self.t = generate_new_temp()
         self.code = self.base.code + self.index.code + [IR('hload',[self.t,self.base.t,self.index.t],"ArrayAccessExpr")]
+        self.mem = "heap"
 
 class NewArrayExpr(Expr):
     def __init__(self, basetype, args, lines):
