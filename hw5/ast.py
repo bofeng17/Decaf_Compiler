@@ -329,7 +329,10 @@ class Method:
             else:
                 fv.t=fv.addr = 'a'+str(fv.id)
         self.body.genCode()
-        self.code = [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
+        self.code = []
+        if self.name == 'main':
+            self.code += [Label("__main__","Method",indent=0)]
+        self.code += [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
         self.code += self.body.code
 
     def printCode(self):
