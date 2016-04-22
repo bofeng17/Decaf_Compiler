@@ -4,10 +4,12 @@ class A {
 class B {
      int y;
      int f() {
-     A = y;
+        y = 0;
+        return y;
      }
      int g(){
         int A;
-	A = y;
+        A = y;
+        return A;
     } 
 }

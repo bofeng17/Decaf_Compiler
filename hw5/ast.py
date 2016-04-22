@@ -333,6 +333,7 @@ class Method:
         self.code += self.body.code
 
     def printCode(self):
+        print "-----------------------------------------------------------------------------"
         for i_or_l in self.code:
             print i_or_l
 
@@ -362,6 +363,7 @@ class Constructor:
         self.code += self.body.code
 
     def printCode(self):
+        print "-----------------------------------------------------------------------------"
         for i_or_l in self.code:
             print i_or_l
 
@@ -665,9 +667,14 @@ class ReturnStmt(Stmt):
         print ")"
 
     def genCode(self):
-        self.expr.genCode()
-        self.code = self.expr.code+\
-            [IR('move',['a0',self.expr.t],"ReturnStmt")]
+        ir = []
+        self.code = []
+        if(self.expr!=None):
+            self.expr.genCode()
+            self.code += self.expr.code
+            ir += [IR('move',['a0',self.expr.t],"ReturnStmt")]
+        ir += [IR('ret',[],"ReturnStmt")]
+        self.code += ir
     def typecheck(self):
         global current_method
         if (self.__typecorrect == None):
