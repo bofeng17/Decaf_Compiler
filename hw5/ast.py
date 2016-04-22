@@ -1498,7 +1498,8 @@ class NewObjectExpr(Expr):
     def genCode(self):
         cmt = 'NewObjectExpr'
         self.t = generate_new_temp()
-        self.code = [IR('halloc',[self.t,class_layouts[self.classref.name][0]],cmt)]
+        tmp_r = generate_new_temp()
+        self.code = [IR('move_immed_i',[tmp_r,class_layouts[self.classref.name][0]],cmt),IR('halloc',[self.t,tmp_r],cmt)]
         for arg in self.args:
             arg.genCode()
             self.code += arg.code
