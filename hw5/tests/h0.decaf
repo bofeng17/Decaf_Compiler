@@ -16,7 +16,7 @@ class A {
         
       A a[][];
       a = new A[4][3];
-      /*  int b,c;*/
+        int b,c;
         /*float bl;*/
         /*b= 1;*/
         /*c = 3;*/
@@ -37,6 +37,6 @@ class A {
         /*bl =2.2;*/
         /*[>for(b=2; b<b+c; c--)<]*/
             /*[>bl--;<]*/
-        /*return b;*/
+        return b;
    }
 }

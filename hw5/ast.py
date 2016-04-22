@@ -23,7 +23,6 @@ def print_ast():
     for cid in classtable:
         c = classtable[cid]
         c.printout()
-    print "-----------------------------------------------------------------------------"
 
 
 
@@ -93,7 +92,6 @@ class Class:
         if (self.builtin):
             return     # Do not print builtin classes
 
-        print "-----------------------------------------------------------------------------"
         print "Class Name: {0}".format(self.name)
         sc = self.superclass
         if (sc == None):
@@ -336,7 +334,7 @@ class Method:
         self.code += self.body.code
 
     def printCode(self):
-        print "-----------------------------------------------------------------------------"
+        print "#-----------------------------------------------------------------------------"
         for i_or_l in self.code:
             print i_or_l
 
@@ -366,7 +364,7 @@ class Constructor:
         self.code += self.body.code
 
     def printCode(self):
-        print "-----------------------------------------------------------------------------"
+        print "#-----------------------------------------------------------------------------"
         for i_or_l in self.code:
             print i_or_l
 
