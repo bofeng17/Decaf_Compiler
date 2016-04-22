@@ -1517,12 +1517,6 @@ class NewArrayExpr(Expr):
             self.__typeof = mytype
         return self.__typeof
 
-    # TODO:
-    def genCode(self):
-        self.t = generate_new_temp()
-        self.args.genCode()
-        self.code = [IR('halloc',[self.t,self.args.t],"NewArrayExpr")]
-        self.code = self.args.code + self.code
 
 t_reg_cnt = -1 # t_reg num starts from 0
 label_cnt = -1 # label num starts from 0
