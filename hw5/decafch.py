@@ -41,7 +41,7 @@ def main(argv=None):
         if decafparser.from_file(infile):
             if (ast.typecheck()):
                 # ast.print_ast()
-                if (codegen.emit_code()):
+                if (codegen.emit_code(filename)):
                     pass
         else:
             print "Failure: there were errors."

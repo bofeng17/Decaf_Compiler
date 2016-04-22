@@ -18,11 +18,11 @@ class Label():
     def __str__(self):
         return self.indent*" "+"{0}:{1:>40}".format(self.label_name, '#'+self.comment)
 
-def emit_code():
+def emit_code(name):
     absmc.g_scan_static()
     absmc.g_obtain_cls_layouts()
-    print absmc.class_layouts
-    print absmc.static_area
+    import sys
+    sys.stdout = open(name+".ami", "w")
     print ".static_area "+str(absmc.static_area[0])
     for cid in ast.classtable:
         c = ast.classtable[cid]
