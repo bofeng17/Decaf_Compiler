@@ -1394,7 +1394,7 @@ class MethodInvocationExpr(Expr):
         self.method = None
         self.__typeof = None
     def __repr__(self):
-        return "Method-call({0}, {1}, {2})".format(self.base, self.mname, self.args)
+        return "Method-call({0}, {1}, {2}, {3})".format(self.base, self.mname, self.args, self.method.id)
 
     def typeof(self):
         if (self.__typeof == None):
@@ -1473,7 +1473,7 @@ class NewObjectExpr(Expr):
         self.args = args
         self.__typeof = None
     def __repr__(self):
-        return "New-object({0}, {1})".format(self.classref.name, self.args)
+        return "New-object({0}, {1}, {2})".format(self.classref.name, self.args, self.constructor.id)
 
     def typeof(self):
         if (self.__typeof == None):
