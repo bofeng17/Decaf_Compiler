@@ -328,8 +328,8 @@ class Method:
                 fv.t=fv.addr = 'a'+str(fv.id)
         self.body.genCode()
         self.code = []
-        if self.name == 'main':
-            self.code += [Label("__main__","Method",indent=0)]
+        # if self.name == 'main':
+            # self.code += [Label("__main__","Method",indent=0)]
         self.code += [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
         self.code += self.body.code
 
@@ -1662,7 +1662,7 @@ class NewArrayExpr(Expr):
             label[i] = get_new_label()
             code[i] = []
             code[i].append([ \
-                IR('move_immed_i',[offset[i-1],self.args[i-1].t],cmt), \
+                IR('move',[offset[i-1],self.args[i-1].t],cmt), \
                 Label(label[i],cmt), \
                 IR('isub',[offset[i-1],offset[i-1],dec_reg],cmt), \
                 IR('halloc',[base[i],self.args[i].t],cmt), \

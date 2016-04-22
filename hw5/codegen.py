@@ -16,7 +16,7 @@ class Label():
         self.comment = comment
         self.indent = indent
     def __str__(self):
-        return self.indent*" "+"{0}:{1:>40}".format(self.label_name, '#'+self.comment)
+        return "{0}:{1:>40}".format(self.label_name, '#'+self.comment)
 
 def emit_code(name):
     absmc.g_scan_static()

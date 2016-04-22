@@ -14,29 +14,29 @@ class A {
    }
    public int m () {
         
-      A a[][];
-      a = new A[4][3];
+      int a[][];
+      a = new int[4][3];
         int b,c;
-        /*float bl;*/
-        /*b= 1;*/
-        /*c = 3;*/
-        /*if(b == 1.1 && b < 10){*/
-            /*b = 2;*/
-        /*}else{*/
-            /*b =3;*/
-        /*}*/
-        /*while(b<10)*/
-          /*if(c<b){*/
-            /*c=++b;*/
-            /*while(c<1){*/
-                /*c=c++;*/
-                /*continue;*/
-            /*}*/
-            /*c=100;*/
-            /*}*/
-        /*bl =2.2;*/
-        /*[>for(b=2; b<b+c; c--)<]*/
-            /*[>bl--;<]*/
+        float bl;
+        b= 1;
+        c = 3;
+        if(b == 1.1 && b < 10){
+            b = 2;
+        }else{
+            b =3;
+        }
+        while(b<10)
+          if(c<b){
+            c=++b;
+            while(c<1){
+                c=c++;
+                continue;
+            }
+            c=100;
+            }
+        bl =2.2;
+        for(b=2; b<b+c; c--)
+            bl--;
         return b;
    }
 }
