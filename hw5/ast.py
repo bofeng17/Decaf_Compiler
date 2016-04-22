@@ -1151,10 +1151,7 @@ class AssignExpr(Expr):
         if(self.lhs.mem == 'reg'):
             ir = [IR('move', [self.lhs.addr, self.rhs.t], "AssignExpr")]
         else:
-            offset_r = generate_new_temp()
-            ir1 = [IR('move_immed_i', [offset_r, 0], "AssignExpr")]#a hack here, to comply with the format of hstore, we assign the offset to 0
-            ir2 = [IR('hstore', [self.lhs.addr, offset_r, self.rhs.t], "AssignExpr")]
-            ir = ir1+ir2
+            ir = [IR('hstore', [self.lhs.addr, self.lhs.offset, self.rhs.t], "AssignExpr")]
         self.code = self.lhs.lcode + self.rhs.code + ir
 
 
@@ -1339,27 +1336,22 @@ class FieldAccessExpr(Expr):
         return "Field-access({0}, {1}, {2})".format(self.base, self.fname, self.field.id)
 
     def genCode(self):
-        self.addr = generate_new_temp()
+        # self.addr = generate_new_temp()
         self.base.genCode()
         self.lcode = self.base.code
         if(self.field.storage == 'static'):
+            self.addr = 'sap'#store base addr, offset store "offset str, need to be move to reg first!"
             offset = str(static_area[1][self.field.id])
-            reg_offset = generate_new_temp()
-            reg_ir = [IR('move_immed_i',[reg_offset, offset],"FieldAccessExpr")]
-            ir = reg_ir + [IR('iadd',[self.addr, 'sap', reg_offset],"FieldAccessExpr")]
-            base = 'sap'
         else:
             offset = str(class_layouts[self.field.inclass.name][1][self.field.id])
-            reg_offset = generate_new_temp()
-            reg_ir = [IR('move_immed_i',[reg_offset, offset],"FieldAccessExpr")]
-            ir = reg_ir + [IR('iadd',[self.addr, self.base.t, reg_offset], "FieldAccessExpr")]
-            base = self.base.t
+            self.addr = self.base.t
+        reg_off = generate_new_temp()
+        ir = [IR('move_immed_i',[reg_off, offset])]
+        self.offset = reg_off
         self.lcode += ir
         self.t = generate_new_temp()
-        reg_off = generate_new_temp()
         self.code = self.lcode + \
-            [IR('move_immed_i',[reg_off, offset])]+\
-            [IR('hload', [self.t, base, reg_off], "FieldAccessExpr")]
+            [IR('hload', [self.t, self.addr, reg_off], "FieldAccessExpr")]
         self.mem = 'relative'
 
     def typeof(self):
@@ -1604,8 +1596,9 @@ class ArrayAccessExpr(Expr):
     def genCode(self):
         self.base.genCode()
         self.index.genCode()
-        self.addr = generate_new_temp()
-        self.lcode = self.base.code + self.index.code + [IR('iadd',[self.addr,self.base.t,self.index.t],"ArrayAccessExpr")]
+        self.addr = self.base.t
+        self.offset = self.index.t
+        self.lcode = self.base.code + self.index.code
         self.t = generate_new_temp()
         self.code = self.base.code + self.index.code + [IR('hload',[self.t,self.base.t,self.index.t],"ArrayAccessExpr")]
         self.mem = "heap"
