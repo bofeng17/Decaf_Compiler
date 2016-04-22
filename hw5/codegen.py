@@ -23,7 +23,7 @@ def emit_code():
     absmc.g_obtain_cls_layouts()
     print absmc.class_layouts
     print absmc.static_area
-    print ".static_area "+str(absmc.static_area[0])
+    print ".static_data "+str(absmc.static_area[0])
     for cid in ast.classtable:
         c = ast.classtable[cid]
         if(not c.builtin):

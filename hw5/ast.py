@@ -232,7 +232,7 @@ class Type:
         else:
             return self.typename
 
-    def __repr(self):
+    def __repr__(self):
         return self.__str__()
 
     def is_subtype_of(self, other):
@@ -1451,8 +1451,11 @@ class MethodInvocationExpr(Expr):
             save_t.append(IR('save',['t%d'%i],cmt))
             rest_t.append(IR('restore',['t%d'%(t_reg_cnt-i)],cmt))
 
-        self.code += save_a+save_t+move_a+[IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt),\
-                     IR('move',[self.t,'a0'],cmt)]+rest_t+rest_a
+        call_ret = [IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt)]
+        if self.method.rtype.typename != 'void':
+            call_ret.append(IR('move',[self.t,'a0'],cmt))
+
+        self.code += save_a+save_t+move_a+ call_ret +rest_t+rest_a
 
 
 class NewObjectExpr(Expr):
