@@ -328,8 +328,8 @@ class Method:
                 fv.t=fv.addr = 'a'+str(fv.id)
         self.body.genCode()
         self.code = []
-        # if self.name == 'main':
-            # self.code += [Label("__main__","Method",indent=0)]
+        if self.name == 'main':
+            self.code += [Label("__main__","Method",indent=0)]
         self.code += [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
         self.code += self.body.code
 
@@ -1476,7 +1476,7 @@ class NewObjectExpr(Expr):
             # resolve the constructor name first
             argtypes = [a.typeof() for a in self.args]
             if (all([a.isok() for a in argtypes])):
-                j = resolve_constructor(current_class, self.classref, argtypes, self.lines)
+                j = resolve_constructor(self.classref, current_class, argtypes, self.lines)
                 if (j == None):
                     self.__typeof = Type('error')
                 else:
