@@ -1,4 +1,5 @@
 from codegen import IR,Label
+import absmc
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
 lastconstructor = 0
@@ -320,6 +321,12 @@ class Method:
         localvars = self.vars.get_locals()
         for v in localvars:
             v.addr = generate_new_temp()
+        formalvars = self.vars.get_params()
+        for fv in formalvars:
+            if(self.storage == 'static'):
+                fv.t=fv.addr = 'a'+str(fv.id-1)
+            else:
+                fv.t=fv.addr = 'a'+str(fv.id)
         self.body.genCode()
         self.code = [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
         self.code += self.body.code
@@ -1048,8 +1055,14 @@ class BinaryExpr(Expr):
                 self.code += [IR(op, [result_reg, self.true],"BinaryExpr")]
                 self.code += [IR(n_op, [result_reg,self.false],"BinaryExpr")]
             else:
-                #TODO
-                pass
+                #object comparison
+                result_reg = generate_new_temp()
+                self.code = self.arg1.lcode + self.arg2.lcode
+                self.code += [IR('isub',[result_reg, self.arg1.addr, self.arg2.addr],"BinaryExpr")]
+                self.code += [IR('bz', [result_reg, self.true],"BinaryExpr")]
+                self.code += [IR('bnz', [result_reg,self.false],"BinaryExpr")]
+
+
 
 
 
@@ -1133,7 +1146,6 @@ class AssignExpr(Expr):
             ir1 = [IR('move_immed_i', [offset_r, 0], "AssignExpr")]#a hack here, to comply with the format of hstore, we assign the offset to 0
             ir2 = [IR('hstore', [self.lhs.addr, offset_r, self.rhs.t], "AssignExpr")]
             ir = ir1+ir2
-        #TODO: add lcode to varExpr, fieldaccexpr, arrayaccexpr
         self.code = self.lhs.lcode + self.rhs.code + ir
 
 
@@ -1318,18 +1330,24 @@ class FieldAccessExpr(Expr):
         return "Field-access({0}, {1}, {2})".format(self.base, self.fname, self.field.id)
 
     def genCode(self):
-        self.at = generate_new_temp()
-        self.offset = generate_new_temp()
+        self.addr = generate_new_temp()
         self.base.genCode()
-        self.field.genCode()#TODO
-        self.base_loc = self.base.t
-        self.lcode = self.base.rcode + \
-            [IR('move_immed_i', [self.offset,self.field.offset],"FieldAccessExpr")]+\
-            [IR('iadd',[self.at, self.base_loc, self.offset],"FieldAccessExpr")]
+        self.lcode = self.base.code
+        if(self.field.storage == 'static'):
+            offset = str(absmc.static_area[1][self.field.id])
+            ir = [IR('iadd',[self.addr, 'sap', offset],"FieldAccessExpr")]
+            base = 'sap'
+        else:
+            offset = str(absmc.class_layouts[self.field.inclass.name][1][self.field.id])
+            ir = [IR('iadd',[self.addr, self.base.t, offset], "FieldAccessExpr")]
+            base = self.base.t
+        self.lcode += ir
         self.t = generate_new_temp()
-        self.rcode = self.lcode + \
-            [IR('hload', [self.t, self.base_loc, self.offset], "FieldAccessExpr")]
-        self.mem = relative
+        reg_off = generate_new_temp()
+        self.code = self.lcode + \
+            [IR('move_immed_i',[reg_off, offset])]+\
+            [IR('hload', [self.t, base, reg_off], "FieldAccessExpr")]
+        self.mem = 'relative'
 
     def typeof(self):
         if (self.__typeof == None):
@@ -1436,6 +1454,9 @@ class ThisExpr(Expr):
         if (self.__typeof == None):
             self.__typeof = Type(current_class)
         return self.__typeof
+    def genCode(self):
+        self.t = 'a0'
+        self.code = []
 
 class SuperExpr(Expr):
     global current_class
@@ -1444,6 +1465,10 @@ class SuperExpr(Expr):
         self.__typeof = None
     def __repr__(self):
         return "Super"
+
+    def genCode(self):
+        self.t = 'a0'
+        self.code = []
 
     def typeof(self):
         if (self.__typeof == None):
@@ -1463,6 +1488,9 @@ class ClassReferenceExpr(Expr):
     def __repr__(self):
         return "ClassReference({0})".format(self.classref.name)
 
+    def genCode(self):
+        self.code =[]
+        self.t = 'sap'
     def typeof(self):
         if (self.__typeof == None):
             self.__typeof = Type(self.classref, literal=True)

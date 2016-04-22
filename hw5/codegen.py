@@ -7,7 +7,7 @@ class IR():
         self.comment = comment
     def __str__(self):
         self.operandList = [str(x) for x in self.operandList]
-        return "        {0} {1}{2:>80}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
+        return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
 
 class Label():
@@ -16,11 +16,13 @@ class Label():
         self.comment = comment
         self.indent = indent
     def __str__(self):
-        return self.indent*" "+"{0}:{1:>80}".format(self.label_name, '#'+self.comment)
+        return self.indent*" "+"{0}:{1:>40}".format(self.label_name, '#'+self.comment)
 
 def emit_code():
     absmc.g_scan_static()
     absmc.g_obtain_cls_layouts()
+    print absmc.class_layouts
+    print absmc.static_area
     print ".static_area "+str(absmc.static_area[0])
     for cid in ast.classtable:
         c = ast.classtable[cid]
