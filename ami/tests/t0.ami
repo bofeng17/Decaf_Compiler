@@ -1,0 +1,26 @@
+# This is a sample
+.static_data 10
+
+top:  move_immed_i t0, 1
+      move_immed_i t1, 2
+      iadd	   t2, t0, t1
+      iadd	   t3, t1, t2
+      ret
+
+M_m_8:                                 #Method
+        move_immed_i t2, 10                           #ConstantExpr
+        move_immed_i t3, 10                           #ConstantExpr
+        halloc t4, t2                           #NewArrayExpr
+        move_immed_i t5, 1                           #NewArrayExpr
+        move t6, t2                           #NewArrayExpr
+L0:                           #NewArrayExpr
+        isub t6, t6, t5                           #NewArrayExpr
+        halloc t7, t3                           #NewArrayExpr
+        hstore t4, t6, t7                           #NewArrayExpr
+        bnz t6, L0                           #NewArrayExpr
+        move t0, t4                             #AssignExpr
+        ret                              #ReturnStmt
+__main__:
+	call	M_m_8
+	ret
+      

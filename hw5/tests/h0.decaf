@@ -12,14 +12,13 @@ class A {
         a0 = a1+A.x+o;
         return a0;
    }
-   public int m () {
+   public void main () {
         
       int a[][];
       int b;
       a = new int[10][10];
-      /*for(b=0;b<10;b++){*/
-        /*a[]*/
-      /*}*/
-      return b;
+      for(b=0;b<10;b++){
+        a[b][b] = a[b][b] + 1;
+      }
    }
 }
