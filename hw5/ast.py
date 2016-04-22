@@ -316,6 +316,8 @@ class Method:
         self.body.typecheck()
 
     def genCode(self):
+        global caller
+        caller = self
         generate_new_temp(True)
         localvars = self.vars.get_locals()
         for v in localvars:
@@ -330,6 +332,7 @@ class Method:
         self.code = []
         if self.name == 'main':
             self.code += [Label("__main__","Method",indent=0)]
+
         self.code += [Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)]
         self.code += self.body.code
 
@@ -362,6 +365,7 @@ class Constructor:
         self.body.genCode()
         self.code = [Label("C_{0}".format(self.id),"Constructor", indent=0)]
         self.code += self.body.code
+        self.code += [IR('ret',[],'Constructor')]
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -1424,7 +1428,6 @@ class MethodInvocationExpr(Expr):
 
     def genCode(self):
         cmt = 'MethodInvocationExpr'
-        self.t = generate_new_temp()
         self.code = []
         self.base.genCode()
         self.code += self.base.code
@@ -1446,14 +1449,22 @@ class MethodInvocationExpr(Expr):
             s = 0
 
         for i in range(0,len(self.args)):
-            save_a.append(IR('save',['a%d'%(i+s)],cmt))
             move_a.append(IR('move',['a%d'%(i+s),self.args[i].t],cmt))
-            rest_a.append(IR('restore',['a%d'%(len(self.args)-1-i+s)],cmt))
+
+        global caller
+        caller_a_reg_cnt = len(caller.vars.get_params())
+        if caller.storage == 'instance':
+            caller_a_reg_cnt += 1
+
+        for i in range(0,min(caller_a_reg_cnt, len(self.args)+s)):
+            save_a.append(IR('save',['a%d'%(i)],cmt))
+            rest_a.append(IR('restore',['a%d'%(min(caller_a_reg_cnt, len(self.args)+s)-1-i)],cmt))
 
         global t_reg_cnt
         for i in range(0,t_reg_cnt+1): # save s_0 - s_t_reg_cnt
             save_t.append(IR('save',['t%d'%i],cmt))
             rest_t.append(IR('restore',['t%d'%(t_reg_cnt-i)],cmt))
+        self.t = generate_new_temp()
 
         call_ret = [IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt)]
         if self.method.rtype.typename != 'void':
@@ -1506,9 +1517,16 @@ class NewObjectExpr(Expr):
         move_a.append(IR('move',['a0',self.t],cmt))
 
         for i in range(0,len(self.args)):
-            save_a.append(IR('save',['a%d'%(i+s)],cmt))
             move_a.append(IR('move',['a%d'%(i+s),self.args[i].t],cmt))
-            rest_a.append(IR('restore',['a%d'%(len(self.args)-1-i+s)],cmt))
+
+        global caller
+        caller_a_reg_cnt = len(caller.vars.get_params())
+        if caller.storage == 'instance':
+            caller_a_reg_cnt += 1
+
+        for i in range(0,min(caller_a_reg_cnt, len(self.args)+s)):
+            save_a.append(IR('save',['a%d'%(i)],cmt))
+            rest_a.append(IR('restore',['a%d'%(min(caller_a_reg_cnt, len(self.args)+s)-1-i)],cmt))
 
         global t_reg_cnt
         for i in range(0,t_reg_cnt+1): # save s_0 - s_t_reg_cnt
@@ -1668,6 +1686,8 @@ class NewArrayExpr(Expr):
             tmp = code[i][0] + tmp + code[i][1]
 
         self.code += tmp
+
+caller = None # used in methodinvocexpr
 
 t_reg_cnt = -1 # t_reg num starts from 0
 label_cnt = -1 # label num starts from 0
