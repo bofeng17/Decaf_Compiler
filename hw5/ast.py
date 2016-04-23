@@ -623,8 +623,8 @@ class ForStmt(Stmt):
         self.cond.genCode()
         self.init.genCode()
         global loopbodyscope
-        loopbodyscope.insert(0, (self.begin,self.end))
         self.updatelabel = get_new_label()
+        loopbodyscope.insert(0, (self.updatelabel,self.end))
         self.body.end = self.updatelabel
         self.body.genCode()
         self.update.genCode()

@@ -7,12 +7,25 @@ class A {
         a=0;
    }
 
-   int test_method(){
+   public static int test_method(){
             int b;
-           for(b=0;b<10;b++){
-                continue;        
-            }
-            return b;
+            int c;
+              for(b=0;b<10;b++){
+                    c = -1;
+                    while(c<100){
+                        c=c+5;
+                        if(c<50){
+                            b++;
+                        }else{
+                            c=c+100;
+                        }
+                        continue;
+                    }
+                    continue;
+                }
+
+
+            return c+b;
 
    }
    int method(int a0, int a1){
@@ -27,6 +40,7 @@ class A {
    }
    public static void main () {
         int a;
-        a = test_method();
+        a=0;
+        a = A.test_method();
    }
 }

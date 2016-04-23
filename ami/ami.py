@@ -448,6 +448,7 @@ def run(label):
             import sys
             pc = labelmap[label]
             while (pc >= 0 and pc < len(program)):
+                print program[pc][0],program[pc][1],program[pc][2]
                 (opcode, args, l) = program[pc]
                 interp(opcode, args)
             state()
