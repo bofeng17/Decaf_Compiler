@@ -362,6 +362,11 @@ class Constructor:
         localvars = self.vars.get_locals()
         for v in localvars:
             v.addr = generate_new_temp()
+
+        formalvars = self.vars.get_params()
+        for fv in formalvars:
+            fv.t=fv.addr = 'a'+str(fv.id)
+
         self.body.genCode()
         self.code = [Label("C_{0}".format(self.id),"Constructor", indent=0)]
         self.code += self.body.code
@@ -946,12 +951,12 @@ class UnaryExpr(Expr):
             self.arg.genCode()
             self.t = generate_new_temp()
             self.code = self.arg.code
-            if(self.arg.__typeof == Type('int')):
+            if(self.arg.typeof() == Type('int')):
                 arg_0 = generate_new_temp()
                 ir = [IR('move_immed_i',[arg_0, 0],"UnaryExpr")]
                 ir += [IR('isub', [self.t, arg_0, self.arg.t],"UnaryExpr")]
                 self.code += ir
-            elif(self.arg.__typeof == Type('float')):
+            elif(self.arg.typeof() == Type('float')):
                 arg_0 = generate_new_temp()
                 ir = [IR('move_immed_f',[arg_0, 0],"UnaryExpr")]
                 ir += [IR('fsub', [self.t, arg_0, self.arg.t],"UnaryExpr")]

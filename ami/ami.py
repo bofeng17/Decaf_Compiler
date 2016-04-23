@@ -435,7 +435,9 @@ def state(k=8):
     print "controlstack's length = ", len(controlstack)
     print "datastack's length = ", len(datastack)
     print "Registers: ",
-    print ([(r,registers[r]) for r in registers])[:k]
+    print ([(r,registers[r]) for r in registers])
+    print "Heap: ",
+    print heap
 
 def run(label):
     global labelmap, program, pc
