@@ -6,20 +6,27 @@ class A {
         o = 10;
         a=0;
    }
+
+   int test_method(){
+            int b;
+           for(b=0;b<10;b++){
+                continue;        
+            }
+            return b;
+
+   }
    int method(int a0, int a1){
         A.x = 100;
         o =20;
         a0 = a1+A.x+o;
+        int a[][];
+        int b;
+        a = new int[10][10];
+
         return a0;
    }
-   public void main () {
-        
-      int a[][];
-      int b;
-      a = new int[10][10];
-      for(b=0;b<10;b++){
-        a[b][b] = a[b][b] + 1;
-      }
-      b = method(a[0][0],a[0][1]);
+   public static void main () {
+        int a;
+        a = test_method();
    }
 }
