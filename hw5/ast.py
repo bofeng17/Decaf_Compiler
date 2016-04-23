@@ -951,12 +951,13 @@ class UnaryExpr(Expr):
             self.arg.genCode()
             self.t = generate_new_temp()
             self.code = self.arg.code
-            if(self.arg.typeof() == Type('int')):
+
+            if(self.arg.typeof().isint()):
                 arg_0 = generate_new_temp()
                 ir = [IR('move_immed_i',[arg_0, 0],"UnaryExpr")]
                 ir += [IR('isub', [self.t, arg_0, self.arg.t],"UnaryExpr")]
                 self.code += ir
-            elif(self.arg.typeof() == Type('float')):
+            elif(self.arg.typeof().isnumeric()):
                 arg_0 = generate_new_temp()
                 ir = [IR('move_immed_f',[arg_0, 0],"UnaryExpr")]
                 ir += [IR('fsub', [self.t, arg_0, self.arg.t],"UnaryExpr")]
