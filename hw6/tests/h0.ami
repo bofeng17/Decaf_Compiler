@@ -1,0 +1,105 @@
+.static_data 1
+#-----------------------------------------------------------------------------
+C_1:                            #Constructor
+BBL_0: 
+        move_immed_i t2, 0                                       #
+        move_immed_i t1, 10                           #ConstantExpr
+        hstore a0, t2, t1                             #AssignExpr
+        move_immed_i t4, 0                           #ConstantExpr
+        move t0, t4                             #AssignExpr
+        ret                             #Constructor
+#-----------------------------------------------------------------------------
+M_test_method_7:                                 #Method
+BBL_1: 
+        move_immed_i t4, 0                           #ConstantExpr
+        move t1, t4                             #AssignExpr
+BBL_2: 
+        move_immed_i t2, 10                           #ConstantExpr
+        ilt t3, t1, t2                             #BinaryExpr
+        bnz t3, BBL_4                             #BinaryExpr
+BBL_3: 
+        bz t3, BBL_13                             #BinaryExpr
+BBL_4: 
+        move_immed_i t5, 1                           #ConstantExpr
+        move_immed_i t7, 0                              #UnaryExpr
+        isub t6, t7, t5                              #UnaryExpr
+        move t0, t6                             #AssignExpr
+BBL_5: 
+        move_immed_i t8, 100                           #ConstantExpr
+        ilt t9, t0, t8                             #BinaryExpr
+        bnz t9, BBL_7                             #BinaryExpr
+BBL_6: 
+        bz t9, BBL_12                             #BinaryExpr
+BBL_7: 
+        move_immed_i t10, 5                           #ConstantExpr
+        iadd t11, t0, t10                             #BinaryExpr
+        move t0, t11                             #AssignExpr
+        move_immed_i t12, 50                           #ConstantExpr
+        ilt t13, t0, t12                             #BinaryExpr
+        bnz t13, BBL_9                             #BinaryExpr
+BBL_8: 
+        bz t13, BBL_10                             #BinaryExpr
+BBL_9: 
+        move t14, t1                               #AutoExpr
+        move_immed_i t15, 1                               #AutoExpr
+        iadd t1, t1, t15                               #AutoExpr
+        jmp BBL_11                                 #IfStmt
+BBL_10: 
+        move_immed_i t16, 100                           #ConstantExpr
+        iadd t17, t0, t16                             #BinaryExpr
+        move t0, t17                             #AssignExpr
+BBL_11: 
+        jmp BBL_5                              #WhileStmt
+BBL_12: 
+        move t18, t1                               #AutoExpr
+        move_immed_i t19, 1                               #AutoExpr
+        iadd t1, t1, t19                               #AutoExpr
+        jmp BBL_2                                #ForStmt
+BBL_13: 
+        iadd t20, t0, t1                             #BinaryExpr
+        move a0, t20                             #ReturnStmt
+        ret                              #ReturnStmt
+#-----------------------------------------------------------------------------
+M_method_8:                                 #Method
+BBL_14: 
+        move_immed_i t3, 0                                       #
+        move_immed_i t2, 100                           #ConstantExpr
+        hstore sap, t3, t2                             #AssignExpr
+        move_immed_i t6, 0                                       #
+        move_immed_i t5, 20                           #ConstantExpr
+        hstore a0, t6, t5                             #AssignExpr
+        move_immed_i t8, 0                                       #
+        hload t9, sap, t8                        #FieldAccessExpr
+        iadd t10, a2, t9                             #BinaryExpr
+        move_immed_i t11, 0                                       #
+        hload t12, a0, t11                        #FieldAccessExpr
+        iadd t13, t10, t12                             #BinaryExpr
+        move a1, t13                             #AssignExpr
+        move_immed_i t14, 10                           #ConstantExpr
+        move_immed_i t15, 10                           #ConstantExpr
+        halloc t16, t14                           #NewArrayExpr
+        move_immed_i t17, 1                           #NewArrayExpr
+        move t18, t14                           #NewArrayExpr
+BBL_15: 
+        isub t18, t18, t17                           #NewArrayExpr
+        halloc t19, t15                           #NewArrayExpr
+        hstore t16, t18, t19                           #NewArrayExpr
+        bnz t18, BBL_15                           #NewArrayExpr
+BBL_16: 
+        move t0, t16                             #AssignExpr
+        move a0, a1                             #ReturnStmt
+        ret                              #ReturnStmt
+#-----------------------------------------------------------------------------
+__main__:                                 #Method
+M_main_9:                                 #Method
+BBL_17: 
+        move_immed_i t1, 0                           #ConstantExpr
+        move t0, t1                             #AssignExpr
+        save t0                   #MethodInvocationExpr
+        save t1                   #MethodInvocationExpr
+        call M_test_method_7                   #MethodInvocationExpr
+        move t2, a0                   #MethodInvocationExpr
+        restore t1                   #MethodInvocationExpr
+        restore t0                   #MethodInvocationExpr
+        move t0, t2                             #AssignExpr
+        ret                              #ReturnStmt
