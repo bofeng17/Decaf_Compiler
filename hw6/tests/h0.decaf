@@ -19,24 +19,16 @@ class A {
                         }else{
                             c=c+100;
                         }
+                        continue;
                     }
+                    continue;
                 }
 
 
             return c+b;
 
    }
-   int method(int a0, int a1){
-        A.x = 100;
-        o =20;
-        a0 = a1+A.x+o;
-        int a[][];
-        int b;
-        a = new int[10][10];
-
-        return a0;
-   }
-   public static void main () {
+    public static void main () {
         int a;
         a=0;
         a = A.test_method();

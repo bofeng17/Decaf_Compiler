@@ -1,5 +1,6 @@
 import ast
 import codegen
+import analyses
 
 #static area
 #[area_size, {ID: offset}]
@@ -135,10 +136,6 @@ def get_pred_labels(code, ir):
     ret = __get_pre_labels(code, code.index(ir))
     return ret
 
-#scan through the bbls, for each br inst, patch the label of the target to the bbl label
-#also setup pred and succ edges properly for the involed bbls
-def update_label(basic_blocks):
-    pass
 
 
 
@@ -163,6 +160,8 @@ def build_basic_blocks(code):
                     ir.update_prepending_labels(get_pred_labels(code,ir))
                 if(each.opcode != 'ret'):
                     ir = get_next_inst(code, each.operandList[-1])
+                    if(ir is None):
+                        continue
                     ir.set_start()
                     ir.update_prepending_labels(get_pred_labels(code,ir))
                     prev_ir = get_pre_inst(code,ir)
@@ -193,9 +192,10 @@ def build_basic_blocks(code):
         if isinstance(each, codegen.IR):
             if(each.opcode in ['jmp','bnz','bz']):#ir that needs to be patched
                 dest_bb = find_bb(ret_basic_blocks, each.operandList[-1])
-                assert(dest_bb != None)
+                # assert(dest_bb != None)
+                if(dest_bb is None):
+                    continue
                 #patch the dest label===>>>>>>the ir in the bbls should change as well
-                #TODO: verify this
                 each.operandList[-1] = dest_bb.label
 
     # for e in ret_basic_blocks:
@@ -225,12 +225,32 @@ def build_basic_blocks(code):
                 next_bb.update_pred(bb)
         if(do_dest):
             dest_bb = find_bb(ret_basic_blocks, term_ir.operandList[-1])
+            if(dest_bb is None):
+                continue
             bb.update_succ(dest_bb)
             dest_bb.update_pred(bb)
 
+    #5th round, eliminate unreachable bbls
+    dead_bbls=[]
+    for bb in ret_basic_blocks:
+        if ret_basic_blocks.index(bb) == 0:#first bb is deem to not have preds
+            continue
+        if (len(bb.preds) == 0):
+            dead_bbls.append(ret_basic_blocks.index(bb))
+            for succ in bb.succs:
+                succ.preds.remove(bb)
+            ret_basic_blocks.remove(bb)
+
+    #6th round, set the preds and succs at each ir, for later analysis usage
+    # for bb in ret_basic_blocks:
+        # preds = bb.preds
+        # succs = bb.succs
+        # for ir in bb.insts:
+            # if ir.start_inst:
+                # ir.preds += [b.get_terminate_inst() for b in preds]
+            # if ir.terminate_inst:
+                # ir.succs += [b.get_start_inst() for b in succs]
     return ret_basic_blocks
-
-
 
 def find_next_bb(bbls, bb):
     if(bb is bbls[-1]):
@@ -255,3 +275,141 @@ def get_new_block_label():
     global block_label_cnt
     block_label_cnt += 1
     return 'BBL_'+str(block_label_cnt)
+
+
+
+def convert_to_ssa(basic_blocks):
+    no_more_phi = True
+    first = True
+    while(not no_more_phi or first):
+        first = False
+        no_more_phi = True
+        reach_ana = analyses.ReachingDef(basic_blocks)
+        for bb in basic_blocks:
+            IN_SET = reach_ana.get_IN(bb)
+            for ir in bb.insts:
+                if(isinstance(ir, codegen.PHI_Node)):
+                    continue
+                uses = ir.get_uses()
+                for u in uses:
+                    #TODO:wtf
+                    if u == 'sap' or u[0] == 'a':
+                        continue
+                    my_def = []
+                    for x in bb.insts[bb.insts.index(ir)-1::-1]:
+                        if u in x.get_def():
+                            my_def = [x]
+                            break
+                    if(len(my_def)==0):
+                        my_def = [x for x in IN_SET if u in x.get_def()]
+                    # print "###########",ir.basic_block.label,ir.opcode,"use:",u
+                    # for i in my_def:
+                        # print "***",i.basic_block.label, i
+                    if len(my_def) == 1:
+                        ir.set_use_ref(my_def[0], uses.index(u))
+                    elif len(my_def) >= 2:
+                        global anti_loop
+                        anti_loop = {}
+                        phi_block,lir,rir = locate_in_1_1_block(bb,u,reach_ana)
+                        if(phi_block is None):
+                            print "We are done"
+                            for la in basic_blocks:
+                                la.print_bb()
+                            assert(False)
+                        # print "[caution!!!!]adding phi node for use:",u,"at block:",phi_block.label
+                        phi = codegen.PHI_Node([lir,rir],phi_block)
+                        phi.start_inst = True
+                        phi_block.insts[0].start_inst = False
+                        phi_block.insts.insert(0,phi)
+                        no_more_phi = False
+                        break#break to ir
+                    else:
+                        assert(False)#should always have a def for each use
+                if no_more_phi == False:#break to bb
+                    break
+            if no_more_phi == False:#break to while
+                break
+
+    test=[]
+    for bb in basic_blocks:
+        for i_or_p in bb.insts:
+            #get new name for the def, and update all my users' use
+            if(len(i_or_p.get_def())==0 or i_or_p.get_def()[0][0] == 'a'):
+                continue
+            new_name = codegen.number_it(i_or_p.get_def()[0])
+            i_or_p.set_def(new_name)
+            my_users = i_or_p.get_def_refs()
+            for ur in my_users:
+                # if(isinstance(ur,codegen.PHI_Node)):
+                    # print bb.label, i_or_p,":", ur.basic_block.label, ur
+                use_indexes = i_or_p.user_index_look_up[ur]
+                map(lambda x: ur.set_use(new_name,x), use_indexes)
+
+            if(isinstance(i_or_p,codegen.PHI_Node)):
+                test += [i_or_p.l_ir, i_or_p.r_ir]
+    # for i in test:
+        # urs = i.get_def_refs()
+        # print "@@@@@@@@@", i.basic_block.label, i
+        # for e in urs:
+            # print e
+    return basic_blocks
+
+
+
+#find the block which has two preds, and each pred's OUT for reachingdef has more than 1 but totall should be 2
+#avaialble definition for the given var
+anti_loop={}
+def locate_in_1_1_block(bb, var, reachingdef):
+    global anti_loop
+    if(anti_loop.has_key(bb)):
+        return None
+    else:
+        anti_loop[bb] = 1
+    while(len(bb.preds) == 1):
+        print "loop",bb.label,
+        bb = bb.preds[0]
+    pb1 = bb.preds[0]
+    pb2 = bb.preds[1]
+    OUT1 = reachingdef.get_OUT(pb1)
+    OUT2 = reachingdef.get_OUT(pb2)
+    defs1 = get_defs_from_OUT(OUT1, var)
+    defs2 = get_defs_from_OUT(OUT2, var)
+
+    # print"------------yoyoyoy=------------",bb.label, var
+    # print"pb1:",pb1.label
+    # for i in defs1:
+        # print i.basic_block.label,i
+    # print "=="
+    # print"pb2:",pb2.label
+    # for i in defs2:
+        # print i.basic_block.label,i
+    # print"------------yoyoyoy=------------"
+
+    if(len(defs1) == 1 or len(defs2) == 1):
+        if(len(set(defs1)|set(defs2)) == 2):
+            if(defs1[0] is not defs2[0]):
+                return (bb,defs1[0],defs2[0])
+            else:
+                if(len(defs1)>1):
+                    return (bb,defs1[1],defs2[0])
+                else:
+                    return (bb,defs1[0],defs2[1])
+
+    if(len(defs1)>1):
+        ret=locate_in_1_1_block(pb1,var,reachingdef)
+        if(ret!=None):
+            return ret
+    if(len(defs2)>1):
+        ret=locate_in_1_1_block(pb2,var,reachingdef)
+        if(ret!=None):
+            return ret
+    return (None,None,None)
+
+def get_defs_from_OUT(OUT, var):
+    return [x for x in OUT if var in x.get_def()]
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 from codegen import IR,Label
-from absmc import class_layouts,static_area,build_basic_blocks
+from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa
 
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
@@ -341,6 +341,11 @@ class Method:
         tmp_code = list(self.code)#we don't want to modify the old list of ir/labels
         self.basic_blocks = build_basic_blocks(tmp_code)
 
+        #TODO: get rid of the old self.code
+        tmp_basic_blocks = list(self.basic_blocks)
+        self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
+        self.basic_blocks = self.ssa_basic_blocks
+
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
         # for i_or_l in self.code:
@@ -386,6 +391,9 @@ class Constructor:
         tmp_code = list(self.code)#we don't want to modify the old list of ir/labels
         self.basic_blocks = build_basic_blocks(tmp_code)
 
+        tmp_basic_blocks = list(self.basic_blocks)
+        self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
+        self.basic_blocks = self.ssa_basic_blocks
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
         # for i_or_l in self.code:
