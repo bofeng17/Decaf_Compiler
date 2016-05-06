@@ -241,15 +241,6 @@ def build_basic_blocks(code):
                 succ.preds.remove(bb)
             ret_basic_blocks.remove(bb)
 
-    #6th round, set the preds and succs at each ir, for later analysis usage
-    # for bb in ret_basic_blocks:
-        # preds = bb.preds
-        # succs = bb.succs
-        # for ir in bb.insts:
-            # if ir.start_inst:
-                # ir.preds += [b.get_terminate_inst() for b in preds]
-            # if ir.terminate_inst:
-                # ir.succs += [b.get_start_inst() for b in succs]
     return ret_basic_blocks
 
 def find_next_bb(bbls, bb):
@@ -320,7 +311,7 @@ def convert_to_ssa(basic_blocks):
                         phi = codegen.PHI_Node([lir,rir],phi_block)
                         phi.start_inst = True
                         phi_block.insts[0].start_inst = False
-                        phi_block.insts.insert(0,phi)
+                        phi_block.insert_phi_inst(phi)
                         no_more_phi = False
                         break#break to ir
                     else:
@@ -347,12 +338,69 @@ def convert_to_ssa(basic_blocks):
 
             if(isinstance(i_or_p,codegen.PHI_Node)):
                 test += [i_or_p.l_ir, i_or_p.r_ir]
-    # for i in test:
-        # urs = i.get_def_refs()
-        # print "@@@@@@@@@", i.basic_block.label, i
-        # for e in urs:
-            # print e
+
+
+
+#Code testing if start and terminate insts set right
+    # for b in basic_blocks:
+        # print "-------",b.label,"---------"
+        # for i in b.insts:
+            # print i,":",i.start_inst,"is_terminate:",i.terminate_inst
+
+    #set the preds and succs at each ir, for later liveness analysis usage
+    for bb in basic_blocks:
+        preds = bb.preds
+        succs = bb.succs
+        for ir in bb.insts:
+            if ir.start_inst:
+                ir.preds += [b.get_terminate_inst() for b in preds]
+            if ir.terminate_inst:
+                ir.succs += [b.get_start_inst() for b in succs]
+
+#Code testing if pred and succs insts set right
+    # for b in basic_blocks:
+        # print "-------",b.label,"---------"
+        # for i in b.insts:
+            # print "IR:",i
+            # print "preds:",
+            # for u in i.preds:print u
+            # print "succs:",
+            # for u in i.succs:print u
+    print "NEW METHOD=======================--------------------------------------------===="
+    liveness = analyses.Liveness(basic_blocks)
+    # for b in basic_blocks:
+        # for ii in b.insts:
+            # print '----------------------------------------------------------------'
+            # print ii.basic_block.label, ii
+            # print 'OUT=====***************************======='
+            # for i in liveness.get_OUT(ii):print i,
+            # print ""
+            # print 'DEF======================================='
+            # for i in ii.get_def():print i,
+            # print ""
+            # print 'USE========++++++++++++++++=============='
+            # for i in ii.get_uses():print i,
+            # print ""
+            # print 'IN============--------------------======='
+            # for i in liveness.get_IN(ii):print i,
+            # print ""
+    tree = analyses.DominatorTree(basic_blocks)
+    traverse_domtree(tree.root, liveness)
+
     return basic_blocks
+
+
+def traverse_domtree(tree_node,liveness):
+    # if tree_node.basic_block.label == 'BBL_0' or tree_node.basic_block.label == 'BBL_16':
+    worklist = [tree_node]
+    while(len(worklist)>0):
+        cur = worklist.remove(worklist[0])
+        if cur is not None:
+            print cur
+            print "LIVE:{",liveness.get_OUT(cur),"}"
+            if(len(cur.dominatees) > 0):
+                worklist += [x for x in cur.dominatees]
+
 
 
 

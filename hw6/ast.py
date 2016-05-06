@@ -341,7 +341,7 @@ class Method:
         tmp_code = list(self.code)#we don't want to modify the old list of ir/labels
         self.basic_blocks = build_basic_blocks(tmp_code)
 
-        #TODO: get rid of the old self.code
+        #DON'T USE self.code from this point on
         tmp_basic_blocks = list(self.basic_blocks)
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
@@ -387,13 +387,16 @@ class Constructor:
         self.code += self.body.code
         self.code += [IR('ret',[],'Constructor')]
 
+
+
         #construct basic_blocks
         tmp_code = list(self.code)#we don't want to modify the old list of ir/labels
         self.basic_blocks = build_basic_blocks(tmp_code)
-
         tmp_basic_blocks = list(self.basic_blocks)
+        #DON'T USE self.code from this point on
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
+
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
         # for i_or_l in self.code:

@@ -19,8 +19,21 @@ class IR():
         set_defuse(self)
 #{user:[use_index]}, for an ir, the users of my def are IRs, but we need to know the exact indexs of the use in my user
         self.user_index_look_up = {}
-
         self.basic_block = None
+
+
+#for dominator tree
+        self.dominators = set()
+        self.dominatees = set()
+
+    def set_dominators(self,my_domtors):
+        for domtor in self.dominators:
+            domtor.dominatees.remove(self)
+        self.dominators = set()
+        for domtor in my_domtors:
+            self.dominators.add(domtor)
+            domtor.dominatees.add(self)
+
     def __str__(self):
         self.operandList = [str(x) for x in self.operandList]
         return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
@@ -41,7 +54,10 @@ class IR():
     def get_def(self):
         return [self.operandList[x] for x in self.define]
     def get_uses(self):
-        return [self.operandList[x] for x in self.use]
+        # if(len(self.use_ref)>0):
+            # return [x.get_def()[0] for x in self.use_ref]
+        # else:
+            return [self.operandList[x] for x in self.use]
 
     def set_def(self, var):#update the name of the def
         self.operandList[self.define[0]] = var
@@ -103,6 +119,15 @@ class BasicBlock():
         if(len(self.insts)>1):
             self.insts[-1].preds += [self.insts[-2]]
             self.insts[-2].succs += [self.insts[-1]]
+
+    def insert_phi_inst(self, phi_inst):
+        #only deal with the pred,succ inside this bbl
+        self.insts.insert(0, phi_inst)
+        if(len(self.insts)>1):
+            self.insts[0].succs += [self.insts[1]]
+            self.insts[1].preds += [self.insts[0]]
+
+
     def update_pred(self, pred):
         self.preds += [pred]
     def update_succ(self, succ):
@@ -123,6 +148,11 @@ class BasicBlock():
                 print '['+each.label+']',
             print ""
         for each in self.insts:
+            # print each.start_inst,each.terminate_inst, each
+            # print 'preds[{0}]'.format(','.join(x.__str__() for x in each.preds))
+            # print 'succs[{0}]'.format(','.join(x.__str__() for x in each.succs))
+            # print
+            # print
             print each
 
 
@@ -137,6 +167,8 @@ class PHI_Node():
         self.rblock = self.r_ir.get_basic_block()
         self.use_ref = [self.l_ir, self.r_ir]
         self.def_ref = []
+        self.preds = []
+        self.succs = []
         self.basic_block = basic_block
 
         self.start_inst = False
@@ -144,6 +176,18 @@ class PHI_Node():
 
 #{user:[use_index]}, for an ir, the users of my def are IRs, but we need to know the exact indexs of the use in my user
         self.user_index_look_up = {}
+#for dominator tree
+        self.dominators = set()
+        self.dominatees = set()
+
+    def set_dominators(self,my_domtors):
+        for domtor in self.dominators:
+            domtor.dominatees.remove(self)
+        self.dominators = set()
+        for domtor in my_domtors:
+            self.dominators.add(domtor)
+            domtor.dominatees.add(self)
+
     def __str__(self):
         return "        {0} = phi [{1}, {2}]  [{3}, {4}]".format(self.t,\
                                                      self.get_uses()[0], self.get_uses()[1],\
@@ -225,7 +269,6 @@ def set_defuse(ir):
         ir.use = list([1])
     if ir.opcode in ['move_immed_i','move_immed_f']:
         ir.define = list([0])
-        # ir.use = list([1])
 
 #{name:version number}
 var_number = {}
