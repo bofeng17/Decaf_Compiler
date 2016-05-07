@@ -318,8 +318,13 @@ def number_it(var_name):
 
     return var_name + '_'+str(var_number[var_name])
 
+# instruction selection part starts here
 def instrSelection(ir_code):
     machine_code = []
+    
+#    # insert prologue
+#    machine_code += insert_prologue()
+
     for ir in ir_code:
         if isinstance(ir, IR):
             opcode = ir.opcode
@@ -332,34 +337,34 @@ def instrSelection(ir_code):
             cm = {'imul':'mult'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand[1:]), \
-                                 MIPSCode('mfhi',operand[0])] # TODO: hi for mult
+                                 MIPSCode('mflo',[operand[0]])] # TODO: handle hi for mult
             cm = {'idiv':'div','imod':'div'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand[1:])] # stores the quotient in $LO and the remainder in $HI
                 if opcode == 'idiv':
-                    machine_code += [MIPSCode('mflo',operand[0])]
+                    machine_code += [MIPSCode('mflo',[operand[0]])]
                 else:
-                    machine_code += [MIPSCode('mfhi',operand[0])]
+                    machine_code += [MIPSCode('mfhi',[operand[0]])]
             
             cm = {'igt':'slt'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],operand[2],operand[1]])]
             cm = {'igeq':'slt'}
             if opcode in cm:
-                machine_code += [MIPSCode(cm[opcode],operand),MIPSCode('xori',operand[0],operand[0],'1')]
+                machine_code += [MIPSCode(cm[opcode],operand),MIPSCode('xori',[operand[0],operand[0],'1'])]
             cm = {'ilt':'slt'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand)]
             cm = {'ileq':'slt'}
             if opcode in cm:
-                machine_code += [MIPSCode(cm[opcode],[operand[0],operand[2],operand[1]]),MIPSCode('xori',operand[0],operand[0],'1')]
+                machine_code += [MIPSCode(cm[opcode],[operand[0],operand[2],operand[1]]),MIPSCode('xori',[operand[0],operand[0],'1'])]
             
             cm = {'bz':'beq','bnz':'bne'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],'$zero',operand[1]])]
             cm = {'jmp':'j'}
             if opcode in cm:
-                machine_code += [MIPSCode(cm[opcode],operand[0])]
+                machine_code += [MIPSCode(cm[opcode],[operand[0]])]
             
             cm = {'halloc':'syscall'}
             if opcode in cm: # TODO: check correctness of saving $a0
@@ -384,7 +389,7 @@ def instrSelection(ir_code):
 #                for reg in live_preg:
 #                    machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',[reg,'$sp','0'])]
 
-                machine_code += [MIPSCode(cm[opcode],operand[0])]
+                machine_code += [MIPSCode(cm[opcode],[operand[0]])]
     
 #                for reg in live_preg[::-1]:
 #                    machine_code += [MIPSCode('addi',['$sp','$sp','4']),MIPSCode('lw',[reg,'$sp','0'])]
@@ -395,19 +400,30 @@ def instrSelection(ir_code):
             
             cm = {'save':'sw','restore':'lw'}
             if opcode in cm:
+                # Shouldn't have save/restore in IR now
                 pass
                     
         else: # TODO: label
             machine_code.append(ir)
-        
-    print machine_code
+
+#    # insert epilogue
+#    machine_code += insert_epilogue()
+
     return machine_code
 
+def insert_prologue(AR):
+    pass
+
+def insert_epilogue(AR):
+    pass
 
 class MIPSCode:
     def __init__(self, opcode, operandList, comment=''):
         self.opcode = opcode
         self.operandList = []
+        # debug
+        if not isinstance(operandList,list):
+            print "operandList %s is not a list!" % operandList
         for operand in operandList:
             if str(operand)[0] in ['v','a','t','s']:
                 operand = '$'+operand
