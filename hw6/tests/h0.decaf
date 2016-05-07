@@ -14,15 +14,15 @@ class A {
             c=1;
               for(b=b+1;b<10;b++){
                     c = c-1;
-                    /*while(c<100){*/
-                        /*c=c+5;*/
-                        /*if(c<50){*/
-                            /*b++;*/
-                        /*}else{*/
-                            /*c=c+100;*/
-                        /*}*/
+                    while(c<100){
+                        c=c+5;
+                        if(c<50){
+                            b++;
+                        }else{
+                            c=c+100;
+                        }
                         /*continue;*/
-                    /*}*/
+                    }
                     /*continue;*/
                 }
 

@@ -110,13 +110,29 @@ class IR():
         return []####only for compatible reason
 
 
-class Label():
+class Label():#No-longer use after basic block construction
     def __init__(self, label_name, comment="", indent=4):
         self.label_name = label_name
         self.comment = comment
         self.indent = indent
     def __str__(self):
         return "{0}:{1:>40}".format(self.label_name, '#'+self.comment)
+
+
+class Method():
+    def __init__(self, method_name, basic_blocks):
+        self.name = method_name
+        self.basic_blocks = basic_blocks
+
+        #stack_layout = [frame_size, mapping{stack_saved_reg ,offset}]
+        self.stack_layout = [0,{}]
+
+
+    def get_basic_blocks(self):
+        return self.basic_blocks
+
+
+
 
 #for BBLs, construct brand new insts as copy of the old insts, leave the old inst/label list alone
 #and do the label patching on the new insts
@@ -126,6 +142,7 @@ class BasicBlock():
         self.insts = []
         self.preds = []
         self.succs = []
+        self.method = None
 
     def add_inst(self, inst):
         self.insts += [inst]
@@ -141,6 +158,19 @@ class BasicBlock():
             self.insts[0].succs += [self.insts[1]]
             self.insts[1].preds += [self.insts[0]]
 
+    def remove_inst(self, inst):
+        for p in inst.preds:
+            for s in inst.succs:
+                p.succs.append(s)
+                s.preds.append(p)
+        for p in inst.preds:
+            p.succs.remove(inst)
+        for s in inst.succs:
+            s.preds.remove(inst)
+        self.insts.remove(inst)
+
+    def insert_inst_before(self, inst, new_inst):
+        pass
 
     def update_pred(self, pred):
         self.preds += [pred]
@@ -207,6 +237,8 @@ class PHI_Node():
             # idomtee.idomtors.remove(self)
         # self.idomtees = set()
         for idomtee in my_idomtees:
+            if idomtee is self:
+                continue
             self.idomtees.add(idomtee)
             idomtee.idomtors.add(self)
 
@@ -241,7 +273,7 @@ class PHI_Node():
     def get_basic_block(self):
         return self.basic_block
 
-    #TODO: maintain same interface for phi_node and ir
+    #NOTE: maintain same interface for phi_node and ir
     def set_def(self, var):#update the name of the def
         self.t = var
     def set_use(self, var, pos):
@@ -324,11 +356,11 @@ def instrSelection(ir_code):
         if isinstance(ir, IR):
             opcode = ir.opcode
             operand = ir.operandList
-            
+
             cm = {'move_immed_i':'li','move':'move','iadd':'add','isub':'sub'} # cur_map
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand)]
-            
+
             cm = {'imul':'mult'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand[1:]), \
@@ -340,7 +372,7 @@ def instrSelection(ir_code):
                     machine_code += [MIPSCode('mflo',operand[0])]
                 else:
                     machine_code += [MIPSCode('mfhi',operand[0])]
-            
+
             cm = {'igt':'slt'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],operand[2],operand[1]])]
@@ -353,14 +385,14 @@ def instrSelection(ir_code):
             cm = {'ileq':'slt'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],operand[2],operand[1]]),MIPSCode('xori',operand[0],operand[0],'1')]
-            
+
             cm = {'bz':'beq','bnz':'bne'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],'$zero',operand[1]])]
             cm = {'jmp':'j'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand[0])]
-            
+
             cm = {'halloc':'syscall'}
             if opcode in cm: # TODO: check correctness of saving $a0
                 machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',['$a0','$sp','0']),\
@@ -373,7 +405,7 @@ def instrSelection(ir_code):
             cm = {'hstore':'sw'}
             if opcode in cm:
                 machine_code += [MIPSCode('add',['$v0',operand[0],operand[1]]),MIPSCode(cm[opcode],[operand[2],'$v0','0'])]
-        
+
             cm = {'call':'jal'}
             if opcode in cm:
                 # TODO: assert get_IN == get_OUT
@@ -385,21 +417,21 @@ def instrSelection(ir_code):
 #                    machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',[reg,'$sp','0'])]
 
                 machine_code += [MIPSCode(cm[opcode],operand[0])]
-    
+
 #                for reg in live_preg[::-1]:
 #                    machine_code += [MIPSCode('addi',['$sp','$sp','4']),MIPSCode('lw',[reg,'$sp','0'])]
 
             cm = {'ret':'jr'}
             if opcode in cm:
                 machine_code += [MIPSCode('move',['$v0','$a0']),MIPSCode(cm[opcode],['$ra'])]
-            
+
             cm = {'save':'sw','restore':'lw'}
             if opcode in cm:
                 pass
-                    
+
         else: # TODO: label
             machine_code.append(ir)
-        
+
     print machine_code
     return machine_code
 
@@ -413,7 +445,7 @@ class MIPSCode:
                 operand = '$'+operand
             self.operandList.append(operand)
         self.comment = comment
-    
+
     def __str__(self):
         if self.opcode in ['lw','sw']: # self.operandList==[val,base,off]
             return "        {0} {1}, {3}({2}){4:>40}".format(self.opcode,self.operandList[0],\

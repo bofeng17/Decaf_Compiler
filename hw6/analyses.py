@@ -126,6 +126,12 @@ class Liveness():
 #For this analysis, we will directly modify the input IR, assign dominance info to them
 class DominatorTree():
     def __init__(self, BBLs):
+        for b in BBLs:
+            for i in b.insts:
+                i.dominators = set()
+                i.dominatees = set()
+                i.idomtors = set()
+                i.idomtees = set()
         self.basic_blocks = BBLs
         self.root = self.basic_blocks[0].insts[0]
         self.all_nodes = []
@@ -166,8 +172,8 @@ class DominatorTree():
         for i in  self.all_nodes:
             # if(not isinstance(i,codegen.IR) or i.opcode !='jmp'):
                 # continue
-            if(i.basic_block.label in ['BBL_0', 'BBL_16'] or True):
-                continue
+            # if(i.basic_block.label in ['BBL_0', 'BBL_16'] or True):
+                # continue
             print "...............",i
             print "idomtors:",len(i.idomtors)
             print "->",
