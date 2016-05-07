@@ -251,15 +251,14 @@ def set_defuse(ir):
         ir.use = list([1])
     if ir.opcode in ['bz','bnz']:
         ir.use = list([0])
-    if ir.opcode in ['hload','halloc']:
+    if ir.opcode in ['hload']:
         ir.define = list([0])
         ir.use = list([1,2])
     if ir.opcode in ['halloc']:
         ir.define = list([0])
         ir.use = list([1])
     if ir.opcode in ['hstore']:
-        ir.define = list([2])
-        ir.use = list([0,1])
+        ir.use = list([0,1,2])
     if ir.opcode in ['save']:
         ir.use = list([0])
     if ir.opcode in ['restore']:
