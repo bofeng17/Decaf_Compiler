@@ -288,7 +288,7 @@ def set_defuse(ir):
         ir.use = list([1])
     if ir.opcode in ['bz','bnz']:
         ir.use = list([0])
-    if ir.opcode in ['hload','halloc']:
+    if ir.opcode in ['hload']:
         ir.define = list([0])
         ir.use = list([1,2])
     if ir.opcode in ['halloc']:
