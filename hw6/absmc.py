@@ -268,8 +268,25 @@ def get_new_block_label():
     return 'BBL_'+str(block_label_cnt)
 
 
+def remove_unneeded_saves(basic_blocks):
+    liveness = analyses.Liveness(basic_blocks)
+    for bb in basic_blocks:
+        to_remove = []
+        for i in bb.insts:
+            if isinstance(i, codegen.IR) and i.opcode == 'save':
+                out = liveness.get_OUT(i)
+                if i.get_uses()[0] not in out:
+                    # print "extra save:", i
+                    to_remove += [i]
+                    to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.get_def()[0] == i.get_uses()[0]]
+        for i in to_remove:
+            bb.remove_inst(i)
+
+
+
 
 def convert_to_ssa(basic_blocks):
+    remove_unneeded_saves(basic_blocks)
     no_more_phi = True
     first = True
     while(not no_more_phi or first):
@@ -349,6 +366,7 @@ def convert_to_ssa(basic_blocks):
 
     #set the preds and succs at each ir, for later liveness analysis usage
     for bb in basic_blocks:
+        bb.method = basic_blocks
         preds = bb.preds
         succs = bb.succs
         for ir in bb.insts:
@@ -391,12 +409,12 @@ def convert_to_ssa(basic_blocks):
 
 def traverse_domtree(tree_node,liveness):
     # if tree_node.basic_block.label == 'BBL_0' or tree_node.basic_block.label == 'BBL_16':
-    # return
+        # print tree_node.idomtees.pop(),"fuck"
     worklist = [tree_node]
     while(len(worklist)>0):
         cur = worklist.pop(0)
         for i in cur.idomtees:print i,cur
-        print "LIVE:{",liveness.get_OUT(cur),"}"
+        # print "LIVE:{",liveness.get_OUT(cur),"}"
         if(len(cur.idomtees) > 0):
             worklist += [x for x in cur.idomtees]
 
@@ -471,9 +489,9 @@ class Reg_allocator():
         self.liveness = liveness
         self.ret_reg = ['v0']
         self.caller_save_regs = ['t'+str(x) for x in range(0,10)]
-        self.callee_save_Regs = ['s'+str(x) for x in range(0,6)]#take out two for mem-ops
+        self.callee_save_regs = ['s'+str(x) for x in range(0,6)]#take out two for mem-ops
         self.sap = ['gp']
-        self.reg_pool = self.callee_save_Regs+self.caller_save_regs
+        self.reg_pool = self.caller_save_regs+self.callee_save_regs
         self.res_men_regs = ['v1','s6','s7']
 #{vreg, preg}
         self.mapping = {}
@@ -516,6 +534,9 @@ class Reg_allocator():
 
 
 
+def remove_phinodes(code):
+    return code
+    basic_blocks = list(code)
 
 
 

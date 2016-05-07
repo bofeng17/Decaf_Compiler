@@ -1,5 +1,5 @@
 from codegen import IR,Label
-from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator
+from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator, remove_phinodes
 
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
@@ -346,7 +346,8 @@ class Method:
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
-        # self.reg_allocator = None
+        #Should only delete phi-node after reg_alloc, cuz it might invalidate the ssa allocation
+        self.basic_blocks = remove_phinodes(self.basic_blocks)
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -399,7 +400,8 @@ class Constructor:
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
-        # self.reg_allocator = None
+        #Should only delete phi-node after reg_alloc, cuz it might invalidate the ssa allocation
+        self.basic_blocks = remove_phinodes(self.basic_blocks)
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
