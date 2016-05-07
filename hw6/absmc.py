@@ -366,8 +366,8 @@ def convert_to_ssa(basic_blocks):
             # for u in i.preds:print u
             # print "succs:",
             # for u in i.succs:print u
-    print "NEW METHOD=======================--------------------------------------------===="
-    liveness = analyses.Liveness(basic_blocks)
+    # print "NEW METHOD=======================--------------------------------------------===="
+    # liveness = analyses.Liveness(basic_blocks)
     # for b in basic_blocks:
         # for ii in b.insts:
             # print '----------------------------------------------------------------'
@@ -384,22 +384,21 @@ def convert_to_ssa(basic_blocks):
             # print 'IN============--------------------======='
             # for i in liveness.get_IN(ii):print i,
             # print ""
-    tree = analyses.DominatorTree(basic_blocks)
-    traverse_domtree(tree.root, liveness)
+    # tree = analyses.DominatorTree(basic_blocks)
 
     return basic_blocks
 
 
 def traverse_domtree(tree_node,liveness):
     # if tree_node.basic_block.label == 'BBL_0' or tree_node.basic_block.label == 'BBL_16':
+    # return
     worklist = [tree_node]
     while(len(worklist)>0):
-        cur = worklist.remove(worklist[0])
-        if cur is not None:
-            print cur
-            print "LIVE:{",liveness.get_OUT(cur),"}"
-            if(len(cur.dominatees) > 0):
-                worklist += [x for x in cur.dominatees]
+        cur = worklist.pop(0)
+        for i in cur.idomtees:print i,cur
+        print "LIVE:{",liveness.get_OUT(cur),"}"
+        if(len(cur.idomtees) > 0):
+            worklist += [x for x in cur.idomtees]
 
 
 
@@ -413,9 +412,12 @@ def locate_in_1_1_block(bb, var, reachingdef):
         return None
     else:
         anti_loop[bb] = 1
+    if len(bb.preds) == 0:
+        return None
     while(len(bb.preds) == 1):
-        print "loop",bb.label,
+        # print "loop",bb.label,
         bb = bb.preds[0]
+    # print bb.label, bb.preds
     pb1 = bb.preds[0]
     pb2 = bb.preds[1]
     OUT1 = reachingdef.get_OUT(pb1)
@@ -455,6 +457,60 @@ def locate_in_1_1_block(bb, var, reachingdef):
 
 def get_defs_from_OUT(OUT, var):
     return [x for x in OUT if var in x.get_def()]
+
+
+#traverse the tree, and allocate reg for all defs,
+#when doing so, all the uses of the def will also be updated
+class Reg_allocator():
+    def __init__(self, basic_blocks):
+        self.basic_blocks = basic_blocks
+        dom_tree = analyses.DominatorTree(self.basic_blocks)
+        liveness = analyses.Liveness(self.basic_blocks)
+        # traverse_domtree(dom_tree.root, liveness)
+        self.dom_tree = dom_tree
+        self.liveness = liveness
+        self.ret_reg = ['v0']
+        self.caller_save_regs = ['t'+str(x) for x in range(0,10)]
+        self.callee_save_Regs = ['s'+str(x) for x in range(0,6)]#take out two for mem-ops
+        self.sap = ['gp']
+        self.reg_pool = self.callee_save_Regs+self.caller_save_regs
+        self.res_men_regs = ['v1','s6','s7']
+#{vreg, preg}
+        self.mapping = {}
+        self.allocate()
+
+    def v2p(self, vreg):
+        if vreg[0] == 't':#only map t_regs
+            return self.mapping[vreg]
+        else:
+            return vreg
+    def allocate(self):
+        worklist = [self.dom_tree.root]
+        while(len(worklist)>0):
+            cur = worklist.pop(0)
+            out_set = self.liveness.get_OUT(cur)
+            print cur.basic_block.label, cur, cur.get_def(), out_set, cur.basic_block.label
+            print self.mapping
+            if cur is None or len(cur.get_def())==0:
+                continue
+            if(len(self.mapping)==0):
+                used_regs=[]
+            else:
+                used_regs = [self.mapping[x] for x in out_set if x != cur.get_def()[0]]
+            new_reg = self.get_unused(used_regs)
+
+            self.mapping[cur.get_def()[0]] = new_reg
+            if(len(cur.idomtees) > 0):
+                worklist += [x for x in cur.idomtees]
+
+
+        # for k in self.mapping:
+            # print k,self.mapping[k]
+
+    def get_unused(self, used):
+        for reg in self.reg_pool:
+            if(reg not in used):
+                return reg
 
 
 

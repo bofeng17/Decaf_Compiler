@@ -10,18 +10,20 @@ class A {
    public static int test_method(){
             int b;
             int c;
+            b=0;
+            c=1;
               for(b=0;b<10;b++){
                     c = -1;
-                    while(c<100){
-                        c=c+5;
-                        if(c<50){
-                            b++;
-                        }else{
-                            c=c+100;
-                        }
-                        continue;
-                    }
-                    continue;
+                    /*while(c<100){*/
+                        /*c=c+5;*/
+                        /*if(c<50){*/
+                            /*b++;*/
+                        /*}else{*/
+                            /*c=c+100;*/
+                        /*}*/
+                        /*continue;*/
+                    /*}*/
+                    /*continue;*/
                 }
 
 
