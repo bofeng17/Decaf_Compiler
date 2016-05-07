@@ -346,6 +346,7 @@ class Method:
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
+        # self.reg_allocator = None
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -398,6 +399,7 @@ class Constructor:
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
+        # self.reg_allocator = None
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"

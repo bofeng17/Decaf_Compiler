@@ -489,16 +489,18 @@ class Reg_allocator():
         while(len(worklist)>0):
             cur = worklist.pop(0)
             out_set = self.liveness.get_OUT(cur)
-            print cur.basic_block.label, cur, cur.get_def(), out_set, cur.basic_block.label
-            print self.mapping
+            # print cur.basic_block.label, cur, cur.get_def(), out_set, cur.basic_block.label
+            # print self.mapping
             if cur is None or len(cur.get_def())==0:
+                if(cur is not None and len(cur.idomtees) > 0):
+                    worklist += [x for x in cur.idomtees]
                 continue
             if(len(self.mapping)==0):
                 used_regs=[]
             else:
                 used_regs = [self.mapping[x] for x in out_set if x != cur.get_def()[0]]
             new_reg = self.get_unused(used_regs)
-
+            # print cur, used_regs, new_reg,"fuck###"
             self.mapping[cur.get_def()[0]] = new_reg
             if(len(cur.idomtees) > 0):
                 worklist += [x for x in cur.idomtees]

@@ -168,6 +168,9 @@ class BasicBlock():
             # print
             # print
             each.reg_mapping = reg_allocator
+            #Hack: remove "move, reg, reg" deadcode
+            if(reg_allocator is not None and isinstance(each,IR) and each.opcode == 'move' and reg_allocator.v2p(each.get_uses()[0]) == reg_allocator.v2p(each.get_def()[0])):
+                continue
             print each
 
 
