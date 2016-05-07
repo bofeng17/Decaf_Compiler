@@ -25,7 +25,18 @@ class IR():
 #for dominator tree
         self.dominators = set()
         self.dominatees = set()
+        self.idomtors = set()
+        self.idomtees = set()
 
+#for reg_mapping
+        self.reg_mapping = None
+    def set_idomtees(self, my_idomtees):
+        # for idomtee in self.idomtees:
+            # idomtee.idomtors.remove(self)
+        # self.idomtees = set()
+        for idomtee in my_idomtees:
+            self.idomtees.add(idomtee)
+            idomtee.idomtors.add(self)
     def set_dominators(self,my_domtors):
         for domtor in self.dominators:
             domtor.dominatees.remove(self)
@@ -35,7 +46,10 @@ class IR():
             domtor.dominatees.add(self)
 
     def __str__(self):
-        self.operandList = [str(x) for x in self.operandList]
+        if self.reg_mapping is not None:
+            self.operandList = [self.reg_mapping.v2p(str(x)) for x in self.operandList]
+        else:
+            self.operandList = [str(x) for x in self.operandList]
         return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
     def set_start(self):
@@ -137,7 +151,7 @@ class BasicBlock():
         return self.insts[0]
     def get_terminate_inst(self):
         return self.insts[-1]
-    def print_bb(self, only_code=False):
+    def print_bb(self, reg_allocator,only_code=False):
         print self.label+": "
         if not only_code:
             print "#preds:",
@@ -153,6 +167,7 @@ class BasicBlock():
             # print 'succs[{0}]'.format(','.join(x.__str__() for x in each.succs))
             # print
             # print
+            each.reg_mapping = reg_allocator
             print each
 
 
@@ -179,6 +194,18 @@ class PHI_Node():
 #for dominator tree
         self.dominators = set()
         self.dominatees = set()
+        self.idomtors = set()
+        self.idomtees = set()
+#for reg_allocator
+        self.reg_mapping = None
+
+    def set_idomtees(self, my_idomtees):
+        # for idomtee in self.idomtees:
+            # idomtee.idomtors.remove(self)
+        # self.idomtees = set()
+        for idomtee in my_idomtees:
+            self.idomtees.add(idomtee)
+            idomtee.idomtors.add(self)
 
     def set_dominators(self,my_domtors):
         for domtor in self.dominators:
@@ -189,9 +216,16 @@ class PHI_Node():
             domtor.dominatees.add(self)
 
     def __str__(self):
-        return "        {0} = phi [{1}, {2}]  [{3}, {4}]".format(self.t,\
+        if self.reg_mapping is not None:
+            reg_mapping = self.reg_mapping
+            return "        {0} = phi [{1}, {2}]  [{3}, {4}]".format(reg_mapping.v2p(self.t),\
+                                                     reg_mapping.v2p(self.get_uses()[0]), reg_mapping.v2p(self.get_uses()[1]),\
+                                                     self.lblock.label,self.rblock.label)
+        else:
+            return "        {0} = phi [{1}, {2}]  [{3}, {4}]".format(self.t,\
                                                      self.get_uses()[0], self.get_uses()[1],\
                                                      self.lblock.label,self.rblock.label)
+
     def get_def(self):#return name
         return [self.t]
     def get_uses(self):#return names
@@ -258,8 +292,7 @@ def set_defuse(ir):
         ir.define = list([0])
         ir.use = list([1])
     if ir.opcode in ['hstore']:
-        ir.define = list([2])
-        ir.use = list([0,1])
+        ir.use = list([0,1,2])
     if ir.opcode in ['save']:
         ir.use = list([0])
     if ir.opcode in ['restore']:

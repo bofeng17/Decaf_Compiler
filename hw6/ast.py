@@ -1,5 +1,5 @@
 from codegen import IR,Label
-from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa
+from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator
 
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
@@ -345,6 +345,7 @@ class Method:
         tmp_basic_blocks = list(self.basic_blocks)
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
+        self.reg_allocator = Reg_allocator(self.basic_blocks)
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -354,7 +355,7 @@ class Method:
             print Label("__main__","Method",indent=0)
         print Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)
         for b in self.basic_blocks:
-            b.print_bb()
+            b.print_bb(self.reg_allocator)
 
 class Constructor:
     """A class encoding constructors and their attributes in Decaf"""
@@ -396,6 +397,7 @@ class Constructor:
         #DON'T USE self.code from this point on
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
+        self.reg_allocator = Reg_allocator(self.basic_blocks)
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -403,7 +405,7 @@ class Constructor:
             # print i_or_l
         print Label("C_{0}".format(self.id),"Constructor", indent=0)
         for b in self.basic_blocks:
-            b.print_bb()
+            b.print_bb(self.reg_allocator)
 
     def printout(self):
         print "CONSTRUCTOR: {0}, {1}".format(self.id, self.visibility)
