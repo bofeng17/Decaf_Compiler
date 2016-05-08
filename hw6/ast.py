@@ -1,4 +1,4 @@
-from codegen import IR,Label,IR_Method
+from codegen import IR,Label,IR_Method,instrSelection
 from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator
 
 classtable = {}  # initially empty dictionary of classes.
@@ -348,6 +348,9 @@ class Method:
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)#for printing code
         self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
+        self.machinecode = instrSelection(self.ir_method.basic_blocks,self.ir_method.stack_layout,self.ir_method.reg_allocator)
+        for mc in self.machinecode:
+            print mc
         # self.reg_allocator = None
 
     def printCode(self):
@@ -403,6 +406,9 @@ class Constructor:
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
         self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
+        self.machinecode = instrSelection(self.ir_method.basic_blocks,self.ir_method.stack_layout,self.ir_method.reg_allocator)
+        for mc in self.machinecode:
+            print mc
         # self.reg_allocator = None
 
     def printCode(self):

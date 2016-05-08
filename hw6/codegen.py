@@ -222,6 +222,7 @@ class BasicBlock():
     def get_terminate_inst(self):
         return self.insts[-1]
     def print_bb(self, reg_allocator,only_code=False):
+        return
         print self.label+": "
         if not only_code:
             print "#preds:",
@@ -391,9 +392,8 @@ def number_it(var_name):
     return var_name + '_'+str(var_number[var_name])
 
 
-
 # instruction selection part starts here
-def instrSelection(bb_list, AR):
+def instrSelection(bb_list, AR, reg_allocator):
     ir_code = []
     for bb in bb_list:
         ir_code += [bb.label]
@@ -402,14 +402,16 @@ def instrSelection(bb_list, AR):
     machine_code = []
     
    # insert prologue, pre-process spill
-   (mc,def_spilled_IR,use_spilled_IR) = insert_prologue()
-   machine_code += mc
+    (mc,def_spilled_IR,use_spilled_IR) = insert_prologue(AR)
+    machine_code += mc
 
     for ir in ir_code:
         if isinstance(ir, PHI_Node):
-            machine_code += [MIPSCode('lw',['$v1','$fp',AR[1][ir.get_uses()[0]][0]]]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
+            # TODO: v2p
+            machine_code += [MIPSCode('lw',['$v1','$fp',str(-AR[1][ir.get_uses()[0]][0])]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
 
         elif isinstance(ir, IR):
+            ir = IR(ir.opcode,[reg_allocator.v2p(o) for o in ir.operandList])
             def_spilled = False
             if ir in def_spilled_IR:
                 def_spilled = True
@@ -434,7 +436,7 @@ def instrSelection(bb_list, AR):
                         assert use_loc == 2
                         ir = IR(ir.opcode,ir_def+[ir_use[-1],'$v1'])
 
-                machine_code += ['lw',['$v1','$fp',offset]]
+                machine_code += ['lw',['$v1','$fp',str(-offset)]]
                 
 
 
@@ -444,7 +446,7 @@ def instrSelection(bb_list, AR):
 
             cm = {'move_immed_i':'li','move':'move','iadd':'add','isub':'sub'} # cur_map
             if opcode in cm:
-                machine_code += [MIPSCode(cm[opcode],operand)]
+                machine_code += [MIPSCode(cm[opcode],operand,'asasa')]
 
             cm = {'imul':'mult'}
             if opcode in cm:
@@ -570,16 +572,19 @@ class MIPSCode:
             if str(operand)[0] in ['v','a','t','s']:
                 operand = '$'+operand
             self.operandList.append(operand)
-        self.comment = comment
+        if comment is not '':
+            self.comment = '# '+comment
+        else: 
+            self.comment = comment
 
     def __str__(self):
         if self.opcode in ['lw','sw']: # self.operandList==[val,base,off]
-            return "        {0} {1}, {3}({2}){4}".format(self.opcode,self.operandList[0],\
-                                                             self.operandList[1],self.operandList[2], '')
+            return "        {0} {1}, {3}({2}) {4}".format(self.opcode,self.operandList[0],\
+                                                             self.operandList[1],self.operandList[2],self.comment)
                                                              # self.operandList[1],self.operandList[2], '#'+self.comment)
         else:
             self.operandList = [str(x) for x in self.operandList]
-            return "        {0} {1}{2}".format(self.opcode, ', '.join(self.operandList), '')
+            return "        {0} {1} {2}".format(self.opcode, ', '.join(self.operandList),self.comment)
             # return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
 
