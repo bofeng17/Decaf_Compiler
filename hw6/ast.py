@@ -1,5 +1,5 @@
-from codegen import IR,Label
-from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator, remove_phinodes
+from codegen import IR,Label,IR_Method
+from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator
 
 classtable = {}  # initially empty dictionary of classes.
 lastmethod = 0
@@ -292,6 +292,7 @@ class Method:
         self.storage = storage
         self.rtype = rtype
         self.vars = VarTable()
+        self.ir_method = None
 
     def update_body(self, body):
         self.body = body
@@ -345,9 +346,9 @@ class Method:
         tmp_basic_blocks = list(self.basic_blocks)
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
-        self.reg_allocator = Reg_allocator(self.basic_blocks)
-        #Should only delete phi-node after reg_alloc, cuz it might invalidate the ssa allocation
-        self.basic_blocks = remove_phinodes(self.basic_blocks)
+        self.reg_allocator = Reg_allocator(self.basic_blocks)#for printing code
+        self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
+        # self.reg_allocator = None
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -368,6 +369,7 @@ class Constructor:
         self.id = lastconstructor
         self.visibility = visibility
         self.vars = VarTable()
+        self.ir_method = None
 
     def update_body(self, body):
         self.body = body
@@ -400,8 +402,8 @@ class Constructor:
         self.ssa_basic_blocks = convert_to_ssa(tmp_basic_blocks)
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
-        #Should only delete phi-node after reg_alloc, cuz it might invalidate the ssa allocation
-        self.basic_blocks = remove_phinodes(self.basic_blocks)
+        self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
+        # self.reg_allocator = None
 
     def printCode(self):
         print "#-----------------------------------------------------------------------------"
@@ -1489,7 +1491,7 @@ class MethodInvocationExpr(Expr):
             s = 0
 
         for i in range(0,len(self.args)):
-            move_a.append(IR('move',['a%d'%(i+s),self.args[i].t],cmt))
+            move_a.insert(0,IR('move',['a%d'%(i+s),self.args[i].t],cmt))
 
         global caller
         caller_a_reg_cnt = len(caller.vars.get_params())
@@ -1554,10 +1556,10 @@ class NewObjectExpr(Expr):
         rest_t = []
         # ctor is regarded as instance method
         s = 1 # shift
-        move_a.append(IR('move',['a0',self.t],cmt))
+        move_a.insert(0,IR('move',['a0',self.t],cmt))
 
         for i in range(0,len(self.args)):
-            move_a.append(IR('move',['a%d'%(i+s),self.args[i].t],cmt))
+            move_a.insert(0,IR('move',['a%d'%(i+s),self.args[i].t],cmt))
 
         global caller
         caller_a_reg_cnt = len(caller.vars.get_params())

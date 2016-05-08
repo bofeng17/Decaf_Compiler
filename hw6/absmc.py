@@ -276,6 +276,8 @@ def remove_unneeded_saves(basic_blocks):
             if isinstance(i, codegen.IR) and i.opcode == 'save':
                 out = liveness.get_OUT(i)
                 if i.get_uses()[0] not in out:
+                    if i.get_uses()[0][0] == 'a' and int(i.get_uses()[0][1])<4:
+                        continue
                     # print "extra save:", i
                     to_remove += [i]
                     to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.get_def()[0] == i.get_uses()[0]]
@@ -366,7 +368,6 @@ def convert_to_ssa(basic_blocks):
 
     #set the preds and succs at each ir, for later liveness analysis usage
     for bb in basic_blocks:
-        bb.method = basic_blocks
         preds = bb.preds
         succs = bb.succs
         for ir in bb.insts:
@@ -410,13 +411,16 @@ def convert_to_ssa(basic_blocks):
 def traverse_domtree(tree_node,liveness):
     # if tree_node.basic_block.label == 'BBL_0' or tree_node.basic_block.label == 'BBL_16':
         # print tree_node.idomtees.pop(),"fuck"
-    worklist = [tree_node]
-    while(len(worklist)>0):
-        cur = worklist.pop(0)
-        for i in cur.idomtees:print i,cur
-        # print "LIVE:{",liveness.get_OUT(cur),"}"
-        if(len(cur.idomtees) > 0):
-            worklist += [x for x in cur.idomtees]
+    # worklist = [tree_node]
+    # while(len(worklist)>0):
+        # cur = worklist.pop(0)
+        # for i in cur.idomtees:print i,cur
+        # # print "LIVE:{",liveness.get_OUT(cur),"}"
+        # if(len(cur.idomtees) > 0):
+            # worklist += [x for x in cur.idomtees]
+    print "ha:",tree_node, tree_node.basic_block.label
+    for i in tree_node.idomtees:
+        traverse_domtree(i,liveness)
 
 
 
@@ -495,33 +499,33 @@ class Reg_allocator():
         self.res_men_regs = ['v1','s6','s7']
 #{vreg, preg}
         self.mapping = {}
-        self.allocate()
+        self.allocate(self.dom_tree.root)
 
     def v2p(self, vreg):
-        if vreg[0] == 't':#only map t_regs
+        # if vreg[0] == 't':#only map t_regs
+        #TODO: this is not the source of the bug, might want to debug this first when things go south
+        if self.mapping.has_key(vreg):
             return self.mapping[vreg]
-        else:
-            return vreg
-    def allocate(self):
-        worklist = [self.dom_tree.root]
-        while(len(worklist)>0):
-            cur = worklist.pop(0)
-            out_set = self.liveness.get_OUT(cur)
-            # print cur.basic_block.label, cur, cur.get_def(), out_set, cur.basic_block.label
-            # print self.mapping
-            if cur is None or len(cur.get_def())==0:
-                if(cur is not None and len(cur.idomtees) > 0):
-                    worklist += [x for x in cur.idomtees]
-                continue
+        return vreg
+    def allocate(self, node):
+        out_set = self.liveness.get_OUT(node)
+        # print node.basic_block.label, node, node.get_def(), out_set, node.basic_block.label
+        # print self.mapping
+        if node is None:
+            return
+        if len(node.get_def())>0 and node.get_def()[0][0]=='t':
             if(len(self.mapping)==0):
                 used_regs=[]
             else:
-                used_regs = [self.mapping[x] for x in out_set if x != cur.get_def()[0]]
+                used_regs = [self.mapping[x] for x in out_set if x != node.get_def()[0] and self.mapping.has_key(x)]
             new_reg = self.get_unused(used_regs)
-            # print cur, used_regs, new_reg,"fuck###"
-            self.mapping[cur.get_def()[0]] = new_reg
-            if(len(cur.idomtees) > 0):
-                worklist += [x for x in cur.idomtees]
+            if(new_reg is None):
+                #spilling
+                node.basic_block.method.set_spilling(node.get_def()[0], node)
+            else:
+                self.mapping[node.get_def()[0]] = new_reg
+        for sub in node.idomtees:
+            self.allocate(sub)
 
 
         # for k in self.mapping:
@@ -531,12 +535,11 @@ class Reg_allocator():
         for reg in self.reg_pool:
             if(reg not in used):
                 return reg
+        return None
 
 
 
-def remove_phinodes(code):
-    return code
-    basic_blocks = list(code)
+
 
 
 

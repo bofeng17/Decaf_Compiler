@@ -7,11 +7,11 @@ class A {
         a=0;
    }
 
-   public static int test_method(){
-            int b;
-            int c;
-            b=0;
-            c=1;
+   public static int test_method(int a, int b, int c, int d, int e, int f, int g){
+            int b1;
+            int c1;
+            b1=a+b+c+d+e+f+g;
+            c1=b1;
               for(b=b+1;b<10;b++){
                     c = c-1;
                     while(c<100){
@@ -21,18 +21,30 @@ class A {
                         }else{
                             c=c+100;
                         }
-                        /*continue;*/
+                        continue;
                     }
-                    /*continue;*/
+                    continue;
                 }
 
 
             return c+b;
 
    }
-    public static void main () {
-        int a;
+    public static void main (int o1, int o2, int o3, int o4, int o5) {
+        int a,b,c,d,e,f,g,h;
+        o1=0;
+        o2=0;
+        o3=0;
+        o4=0;
+        o5=0;
         a=0;
-        a = A.test_method();
+        b=0;
+        c=0;
+        d=0;
+        e=0;
+        f=0;
+        g=0;
+        a = A.test_method(a,b,c,d,e,f,g);
+        a = a+b+c+d+e+f+g+o1+o2+o3+o4+o5;
    }
 }
