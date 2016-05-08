@@ -350,15 +350,55 @@ def number_it(var_name):
 
     return var_name + '_'+str(var_number[var_name])
 
+
+
 # instruction selection part starts here
-def instrSelection(ir_code):
+def instrSelection(bb_list, AR):
+    ir_code = []
+    for bb in bb_list:
+        ir_code += [bb.label]
+        ir_code += bb.insts
+
     machine_code = []
     
-#    # insert prologue
-#    machine_code += insert_prologue()
+   # insert prologue, pre-process spill
+   (mc,def_spilled_IR,use_spilled_IR) = insert_prologue()
+   machine_code += mc
 
     for ir in ir_code:
-        if isinstance(ir, IR):
+        if isinstance(ir, PHI_Node):
+            machine_code += [MIPSCode('lw',['$v1','$fp',AR[1][ir.get_uses()[0]][0]]]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
+
+        elif isinstance(ir, IR):
+            def_spilled = False
+            if ir in def_spilled_IR:
+                def_spilled = True
+                def_spilled_ARoffset = def_spilled_IR[ir]
+                ir = IR(ir.opcode,['$v1',ir.operand[1:]])
+
+            if ir in use_spilled_IR:
+                use_locs = use_spilled_IR[ir][0]
+                offset = use_spilled_IR[ir][1]
+                ir_def = ir.get_def()
+                ir_use = ir.get_uses()
+                for use_loc in use_locs: 
+                    if use_loc == 0:
+                        ir = IR(ir.opcode,ir_def+['$v1',ir_use[1:]])
+                    elif use_loc == 1:
+                        if len(ir_use) == 2:
+                            ir = IR(ir.opcode,ir_def+[ir_use[0],'$v1'])
+                        else:
+                            assert len(ir_use == 3)
+                            ir = IR(ir.opcode,ir_def+[ir_use[0],'$v1',ir_use[2]])
+                    else:
+                        assert use_loc == 2
+                        ir = IR(ir.opcode,ir_def+[ir_use[-1],'$v1'])
+
+                machine_code += ['lw',['$v1','$fp',offset]]
+                
+
+
+
             opcode = ir.opcode
             operand = ir.operandList
 
@@ -413,41 +453,71 @@ def instrSelection(ir_code):
 
             cm = {'call':'jal'}
             if opcode in cm:
-                # TODO: assert get_IN == get_OUT
-#                live_vreg = list(analyses.Liveness(ir.basic_block.method).get_IN())
-#                live_preg = []
-#                for reg in live_vreg:
-#                    live_preg.append(map_todo[reg]) # TODO: v-p map
-#                for reg in live_preg:
-#                    machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',[reg,'$sp','0'])]
-
                 machine_code += [MIPSCode(cm[opcode],[operand[0]])]
-
-#                for reg in live_preg[::-1]:
-#                    machine_code += [MIPSCode('addi',['$sp','$sp','4']),MIPSCode('lw',[reg,'$sp','0'])]
-
             cm = {'ret':'jr'}
             if opcode in cm:
+                # insert epilogue
+                machine_code += insert_epilogue(AR)
                 machine_code += [MIPSCode('move',['$v0','$a0']),MIPSCode(cm[opcode],['$ra'])]
 
-            cm = {'save':'sw','restore':'lw'}
+            cm = {'save':'sw'}
             if opcode in cm:
-                # Shouldn't have save/restore in IR now
-                pass
+                machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode(cm[opcode],[operand[0],'$sp','0'])]
 
-        else: # TODO: label
+            cm = {'restore':'lw'}
+            if opcode in cm:
+                machine_code += [MIPSCode(cm[opcode],[operand[0],'$sp','0']),MIPSCode('addi',['$sp','$sp','4'])]
+
+
+            if def_spilled:
+                machine_code += [MIPSCode('sw',['$v1','fp',def_spilled_ARoffset])]
+
+
+        else: # label
+            assert isinstance(ir,str)
             machine_code.append(ir)
-
-#    # insert epilogue
-#    machine_code += insert_epilogue()
 
     return machine_code
 
 def insert_prologue(AR):
-    pass
+    #AR = [frame_size, mapping{stack_saved_reg: [offset, IR_or_PhiNode]}]
+    # push $ra, push $fp, allocate stack frame
+    def_spilled_IR = {} # {ir: AR_offset}
+    use_spilled_IR = {} # {ir: [[pos],AR_offset]}
+    machine_code = [MIPSCode('sw',['$ra','$sp','-4']),MIPSCode('sw',['$fp','$sp','-8']),\
+                    MIPSCode('addi',['$sp','$sp','-8']),MIPSCode('move',['$fp','$sp']),\
+                    MIPSCode('addi',['$sp','$sp','-'+str(AR[0])])]
+    # push callee-saved & spilled registers
+    mapping = AR[1] # dict
+    for reg in mapping:
+        offset = mapping[reg][0]
+        if len(mapping[reg]) == 1:
+            # callee-saved registers
+            machine_code += [MIPS('sw',[reg,'$fp',offset])]
+        else: # len is 2
+            # spilled registers, reg is actually vreg
+            assert len(mapping[reg]) == 2
+
+            def_spilled = mapping[reg][1]
+            def_spilled_IR[def_spilled] = offset
+            for use_spilled in def_spilled.get_def_refs():
+                pos = use_spilled.get_uses().index(reg)
+                if use_spilled not in use_spilled_IR:
+                    use_spilled_IR[use_spilled] = [[pos],offset]
+                else:
+                    use_spilled_IR[use_spilled][1].append(pos)
+
+
+    return machine_code, def_spilled_IR, use_spilled_IR
 
 def insert_epilogue(AR):
-    pass
+    machine_code = []
+    # pop callee-saved registers
+
+    # destroy stack frame, pop $fp, pop $ra
+    machine_code += [MIPSCode('addi',['$sp','$sp',str(AR[0]+8)]),\
+                     MIPSCode('lw',['$ra','$sp','-4']),MIPSCode('lw',['$fp','$sp','-8'])]
+    return machine_code
 
 class MIPSCode:
     def __init__(self, opcode, operandList, comment=''):
