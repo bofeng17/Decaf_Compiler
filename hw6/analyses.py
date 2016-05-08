@@ -166,14 +166,14 @@ class DominatorTree():
             # print i, "my_children:",i_children
             # for i in i_children:print i
             # print "-----------"
-            map(lambda x: x.set_idomtees(i_children), worklist)
-            worklist = list(i_children)
+            map(lambda x: x.set_idomtees(i_children), [worklist.pop(0)])
+            worklist += list(i_children)
 
         for i in  self.all_nodes:
             # if(not isinstance(i,codegen.IR) or i.opcode !='jmp'):
                 # continue
-            # if(i.basic_block.label in ['BBL_0', 'BBL_16'] or True):
-                # continue
+            if(i.basic_block.label in ['BBL_0', 'BBL_16'] or True):
+                continue
             print "...............",i
             print "idomtors:",len(i.idomtors)
             print "->",
@@ -184,8 +184,6 @@ class DominatorTree():
             for x in i.idomtees: print x,
             print ""
             print""
-
-
 
 
 

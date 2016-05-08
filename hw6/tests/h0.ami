@@ -1,97 +1,119 @@
 .static_data 1
 #-----------------------------------------------------------------------------
 C_1:                            #Constructor
-BBL_0: 
-#preds: succs: 
-        move_immed_i t2_0, 0                                       #
-        move_immed_i t1_0, 10                           #ConstantExpr
-        hstore a0, t2_0, t1_1                             #AssignExpr
-        move_immed_i t4_0, 0                           #ConstantExpr
-        move t0_0, t4_0                             #AssignExpr
+        move_immed_i t2, 0                                       #
+        move_immed_i t1, 10                           #ConstantExpr
+        hstore a0, t2, t1                             #AssignExpr
+        move_immed_i t4, 0                           #ConstantExpr
+        move t0, t4                             #AssignExpr
         ret                             #Constructor
 #-----------------------------------------------------------------------------
 M_test_method_7:                                 #Method
-BBL_1: 
-#preds: succs: [BBL_2] 
-        move_immed_i t4_1, 0                           #ConstantExpr
-        move t1_2, t4_1                             #AssignExpr
-BBL_2: 
-#preds: [BBL_1] [BBL_14] succs: [BBL_3] [BBL_4] 
-        t1_3 = phi [t1_2, t1_6]  [BBL_1, BBL_14]
-        move_immed_i t2_1, 10                           #ConstantExpr
-        ilt t3_0, t1_3, t2_1                             #BinaryExpr
-        bnz t3_0, BBL_4                             #BinaryExpr
-BBL_3: 
-#preds: [BBL_2] succs: [BBL_4] [BBL_15] 
-        bz t3_0, BBL_15                             #BinaryExpr
-BBL_4: 
-#preds: [BBL_2] [BBL_3] succs: [BBL_5] 
-        move_immed_i t5_0, 1                           #ConstantExpr
-        move_immed_i t7_0, 0                              #UnaryExpr
-        isub t6_0, t7_0, t5_0                              #UnaryExpr
-        move t0_1, t6_0                             #AssignExpr
-BBL_5: 
-#preds: [BBL_4] [BBL_11] succs: [BBL_6] [BBL_7] 
-        t1_4 = phi [t1, t1_5]  [BBL_2, BBL_9]
-        t0_2 = phi [t0_1, t0]  [BBL_4, BBL_11]
-        move_immed_i t8_0, 100                           #ConstantExpr
-        ilt t9_0, t0_2, t8_0                             #BinaryExpr
-        bnz t9_0, BBL_7                             #BinaryExpr
-BBL_6: 
-#preds: [BBL_5] succs: [BBL_7] [BBL_13] 
-        bz t9_0, BBL_13                             #BinaryExpr
-BBL_7: 
-#preds: [BBL_5] [BBL_6] succs: [BBL_8] [BBL_9] 
-        move_immed_i t10_0, 5                           #ConstantExpr
-        iadd t11_0, t0_2, t10_0                             #BinaryExpr
-        move t0_3, t11_0                             #AssignExpr
-        move_immed_i t12_0, 50                           #ConstantExpr
-        ilt t13_0, t0_3, t12_0                             #BinaryExpr
-        bnz t13_0, BBL_9                             #BinaryExpr
-BBL_8: 
-#preds: [BBL_7] succs: [BBL_9] [BBL_10] 
-        bz t13_0, BBL_10                             #BinaryExpr
-BBL_9: 
-#preds: [BBL_7] [BBL_8] succs: [BBL_11] 
-        move t14_0, t1_5                               #AutoExpr
-        move_immed_i t15_0, 1                               #AutoExpr
-        iadd t1_5, t1_4, t15_0                               #AutoExpr
-        jmp BBL_11                                 #IfStmt
-BBL_10: 
-#preds: [BBL_8] succs: [BBL_11] 
-        move_immed_i t16_0, 100                           #ConstantExpr
-        iadd t17_0, t0_3, t16_0                             #BinaryExpr
-        move t0_4, t17_0                             #AssignExpr
-BBL_11: 
-#preds: [BBL_9] [BBL_10] succs: [BBL_5] 
-        t0_5 = phi [t0_3, t0_4]  [BBL_7, BBL_10]
-        jmp BBL_5                           #ContinueStmt
-BBL_13: 
-#preds: [BBL_6] succs: [BBL_14] 
-        jmp BBL_14                           #ContinueStmt
-BBL_14: 
-#preds: [BBL_13] succs: [BBL_2] 
-        move t18_0, t1_6                               #AutoExpr
-        move_immed_i t19_0, 1                               #AutoExpr
-        iadd t1_6, t1_4, t19_0                               #AutoExpr
-        jmp BBL_2                                #ForStmt
-BBL_15: 
-#preds: [BBL_3] succs: 
-        iadd t20_0, t0_2, t1_3                             #BinaryExpr
-        move a0, t20_0                             #ReturnStmt
+        iadd t2, a0, a1                             #BinaryExpr
+        iadd t3, t2, a2                             #BinaryExpr
+        iadd t4, t3, a3                             #BinaryExpr
+        iadd t5, t4, a4                             #BinaryExpr
+        iadd t6, t5, a5                             #BinaryExpr
+        iadd t7, t6, a6                             #BinaryExpr
+        move t1, t7                             #AssignExpr
+        move t0, t1                             #AssignExpr
+        move_immed_i t10, 1                           #ConstantExpr
+        iadd t11, a1, t10                             #BinaryExpr
+        move a1, t11                             #AssignExpr
+L0:                                #ForStmt
+        move_immed_i t8, 10                           #ConstantExpr
+        ilt t9, a1, t8                             #BinaryExpr
+        bnz t9, L1                             #BinaryExpr
+        bz t9, L2                             #BinaryExpr
+L1:                                #ForStmt
+        move_immed_i t12, 1                           #ConstantExpr
+        isub t13, a2, t12                             #BinaryExpr
+        move a2, t13                             #AssignExpr
+L3:                                #ForStmt
+        move t14, a1                               #AutoExpr
+        move_immed_i t15, 1                               #AutoExpr
+        iadd a1, a1, t15                               #AutoExpr
+        jmp L0                                #ForStmt
+L2:                              #BlockStmt
+        iadd t16, a2, a1                             #BinaryExpr
+        move a0, t16                             #ReturnStmt
         ret                              #ReturnStmt
 #-----------------------------------------------------------------------------
 __main__:                                 #Method
 M_main_8:                                 #Method
-BBL_16: 
-#preds: succs: 
-        move_immed_i t1_7, 0                           #ConstantExpr
-        move t0_6, t1_7                             #AssignExpr
-        save t0_6                   #MethodInvocationExpr
-        save t1_7                   #MethodInvocationExpr
+        move_immed_i t8, 0                           #ConstantExpr
+        move a0, t8                             #AssignExpr
+        move_immed_i t9, 0                           #ConstantExpr
+        move a1, t9                             #AssignExpr
+        move_immed_i t10, 0                           #ConstantExpr
+        move t0, t10                             #AssignExpr
+        move_immed_i t11, 0                           #ConstantExpr
+        move t2, t11                             #AssignExpr
+        move_immed_i t12, 0                           #ConstantExpr
+        move t1, t12                             #AssignExpr
+        move_immed_i t13, 0                           #ConstantExpr
+        move t4, t13                             #AssignExpr
+        move_immed_i t14, 0                           #ConstantExpr
+        move t3, t14                             #AssignExpr
+        move_immed_i t15, 0                           #ConstantExpr
+        move t6, t15                             #AssignExpr
+        move_immed_i t16, 0                           #ConstantExpr
+        move t5, t16                             #AssignExpr
+        save a0                   #MethodInvocationExpr
+        save a1                   #MethodInvocationExpr
+        save t0                   #MethodInvocationExpr
+        save t1                   #MethodInvocationExpr
+        save t2                   #MethodInvocationExpr
+        save t3                   #MethodInvocationExpr
+        save t4                   #MethodInvocationExpr
+        save t5                   #MethodInvocationExpr
+        save t6                   #MethodInvocationExpr
+        save t7                   #MethodInvocationExpr
+        save t8                   #MethodInvocationExpr
+        save t9                   #MethodInvocationExpr
+        save t10                   #MethodInvocationExpr
+        save t11                   #MethodInvocationExpr
+        save t12                   #MethodInvocationExpr
+        save t13                   #MethodInvocationExpr
+        save t14                   #MethodInvocationExpr
+        save t15                   #MethodInvocationExpr
+        save t16                   #MethodInvocationExpr
+        move a0, t0                   #MethodInvocationExpr
+        move a1, t2                   #MethodInvocationExpr
+        move a2, t1                   #MethodInvocationExpr
+        move a3, t4                   #MethodInvocationExpr
+        move a4, t3                   #MethodInvocationExpr
+        move a5, t6                   #MethodInvocationExpr
+        move a6, t5                   #MethodInvocationExpr
         call M_test_method_7                   #MethodInvocationExpr
-        move t2_2, a0                   #MethodInvocationExpr
-        restore t1_8                   #MethodInvocationExpr
-        restore t0_7                   #MethodInvocationExpr
-        move t0_8, t2_2                             #AssignExpr
+        move t17, a0                   #MethodInvocationExpr
+        restore t16                   #MethodInvocationExpr
+        restore t15                   #MethodInvocationExpr
+        restore t14                   #MethodInvocationExpr
+        restore t13                   #MethodInvocationExpr
+        restore t12                   #MethodInvocationExpr
+        restore t11                   #MethodInvocationExpr
+        restore t10                   #MethodInvocationExpr
+        restore t9                   #MethodInvocationExpr
+        restore t8                   #MethodInvocationExpr
+        restore t7                   #MethodInvocationExpr
+        restore t6                   #MethodInvocationExpr
+        restore t5                   #MethodInvocationExpr
+        restore t4                   #MethodInvocationExpr
+        restore t3                   #MethodInvocationExpr
+        restore t2                   #MethodInvocationExpr
+        restore t1                   #MethodInvocationExpr
+        restore t0                   #MethodInvocationExpr
+        restore a1                   #MethodInvocationExpr
+        restore a0                   #MethodInvocationExpr
+        move t0, t17                             #AssignExpr
+        iadd t18, t0, t2                             #BinaryExpr
+        iadd t19, t18, t1                             #BinaryExpr
+        iadd t20, t19, t4                             #BinaryExpr
+        iadd t21, t20, t3                             #BinaryExpr
+        iadd t22, t21, t6                             #BinaryExpr
+        iadd t23, t22, t5                             #BinaryExpr
+        iadd t24, t23, a0                             #BinaryExpr
+        iadd t25, t24, a1                             #BinaryExpr
+        move t0, t25                             #AssignExpr
         ret                              #ReturnStmt

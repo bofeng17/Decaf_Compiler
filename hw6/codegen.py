@@ -50,7 +50,8 @@ class IR():
             self.operandList = [self.reg_mapping.v2p(str(x)) for x in self.operandList]
         else:
             self.operandList = [str(x) for x in self.operandList]
-        return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
+        return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '')
+        # return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
     def set_start(self):
         self.start_inst = True
@@ -116,20 +117,59 @@ class Label():#No-longer use after basic block construction
         self.comment = comment
         self.indent = indent
     def __str__(self):
-        return "{0}:{1:>40}".format(self.label_name, '#'+self.comment)
+        return "{0}:{1}".format(self.label_name, '#'+self.comment)
 
 
-class Method():
-    def __init__(self, method_name, basic_blocks):
+class IR_Method():
+    def __init__(self, method_name, basic_blocks,allocator):
         self.name = method_name
         self.basic_blocks = basic_blocks
-
-        #stack_layout = [frame_size, mapping{stack_saved_reg ,offset}]
+        for x in self.basic_blocks:
+            x.method = self
+        #stack_layout = [frame_size, mapping{stack_saved_reg ,[(offset, IR_or_PhiNode)]}]
         self.stack_layout = [0,{}]
-
+        self.reg_allocator = allocator
+        self.harvest_layout()
+        self.print_layout()
 
     def get_basic_blocks(self):
         return self.basic_blocks
+
+    def print_layout(self):
+        print "Method:"+self.name
+        print "size:"+str(self.stack_layout[0])
+        for reg in self.stack_layout[1]:
+            print "reg to spill:"+self.reg_allocator.v2p(reg)
+            for tup in self.stack_layout[1][reg]:
+                print "off:{0},IR:{1}".format(tup[0],tup[1])
+
+
+    def harvest_layout(self):
+        for b in self.basic_blocks:
+            for i in b.insts:
+                if len(i.get_def())<1:
+                    continue
+                if self.reg_allocator.v2p(i.get_def()[0]) in self.reg_allocator.callee_save_regs or len([x for x in i.get_def_refs() if isinstance(x, PHI_Node)]) > 0:
+                    self.set_spilling(i.get_def()[0], i)
+
+    def set_spilling(self, reg, containing_node):
+        increase = 4
+        off_to_fp = 4
+        if self.stack_layout[1].has_key(reg):
+            self.stack_layout[1][reg] += [(self.stack_layout[0]+off_to_fp, containing_node)]
+        else:
+            self.stack_layout[1][reg] = [(self.stack_layout[0]+off_to_fp, containing_node)]
+
+        self.stack_layout[0] += increase
+        # #NOTE: reg can be vreg or non-t-but-p regs
+        # if reg != 'ra':
+            # increase = 4
+        # else:
+            # increase = 8
+            # if(self.stack_layout[0]%8 != 0):
+                # self.stack_layout[0] += 4
+
+
 
 
 
@@ -534,10 +574,12 @@ class MIPSCode:
 
     def __str__(self):
         if self.opcode in ['lw','sw']: # self.operandList==[val,base,off]
-            return "        {0} {1}, {3}({2}){4:>40}".format(self.opcode,self.operandList[0],\
-                                                             self.operandList[1],self.operandList[2], '#'+self.comment)
+            return "        {0} {1}, {3}({2}){4}".format(self.opcode,self.operandList[0],\
+                                                             self.operandList[1],self.operandList[2], '')
+                                                             # self.operandList[1],self.operandList[2], '#'+self.comment)
         else:
             self.operandList = [str(x) for x in self.operandList]
-            return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
+            return "        {0} {1}{2}".format(self.opcode, ', '.join(self.operandList), '')
+            # return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
 
