@@ -1200,8 +1200,8 @@ class AssignExpr(Expr):
         return self.__typeof
 
     def genCode(self):
-        self.rhs.genCode()
         self.lhs.genCode()
+        self.rhs.genCode()
         self.t = self.rhs.t
         if(self.lhs.mem == 'reg'):
             ir = [IR('move', [self.lhs.addr, self.rhs.t], "AssignExpr")]
@@ -1401,7 +1401,7 @@ class FieldAccessExpr(Expr):
             offset = str(class_layouts[self.field.inclass.name][1][self.field.id])
             self.addr = self.base.t
         reg_off = generate_new_temp()
-        ir = [IR('move_immed_i',[reg_off, offset])]
+        ir = [IR('move_immed_i',[reg_off, offset], "FieldAccessExpr")]
         self.offset = reg_off
         self.lcode += ir
         self.t = generate_new_temp()
