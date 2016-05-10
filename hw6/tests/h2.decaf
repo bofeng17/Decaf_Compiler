@@ -1,0 +1,37 @@
+class A {
+   public static int x;
+   public int o;
+   public A () {
+        int a;
+        o = 10;
+        a=0;
+   }
+
+   public static int test_method(){
+        int b1;
+        int c1;
+        b1=2;
+        c1=3;
+              
+        if(c1<b1){
+            b1++;
+        }else{
+            b1=b1+100;
+        }    
+
+        return b1;
+
+   }
+    public static void main () {
+        int a,b,c,d,e,f,g,h;
+        a=1;
+        b=2;
+        c=3;
+        d=4;
+        e=5;
+        f=6;
+        g=7;
+        a = A.test_method();
+        a = a+b+c+d+e+f+g;
+   }
+}
