@@ -656,8 +656,7 @@ class MIPSCode:
         self.operandList = []
         for o in operandList:
             o = reg_allocator.v2p(o)
-            # if str(o)[0] in ['v','a','t','s']:
-            if str(o)[0] in ['v','a','t']:
+            if str(o)[0] in ['v','a','t','s']:
                 o = '$'+o
             self.operandList.append(o)
 

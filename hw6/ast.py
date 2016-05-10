@@ -1520,7 +1520,7 @@ class MethodInvocationExpr(Expr):
         if self.method.rtype.typename != 'void':
             ret_val = [IR('move',[self.t,'a0'],cmt)]
 
-        self.code += save_a+save_t+move_a+ call +rest_t+rest_a+ ret_val
+        self.code += save_a+save_t+move_a+ call +rest_t+ ret_val +rest_a
 
 
 class NewObjectExpr(Expr):
