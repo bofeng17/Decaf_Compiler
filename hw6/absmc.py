@@ -275,12 +275,12 @@ def remove_unneeded_saves(basic_blocks):
         for i in bb.insts:
             if isinstance(i, codegen.IR) and i.opcode == 'save':
                 out = liveness.get_OUT(i)
-                if i.get_uses()[0] not in out:
+                if len(i.get_uses()) > 0 and i.get_uses()[0] not in out:
                     if i.get_uses()[0][0] == 'a' and int(i.get_uses()[0][1])<4:
                         continue
-                    # print "extra save:", i
+                    print "extra save:", i, out
                     to_remove += [i]
-                    to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.get_def()[0] == i.get_uses()[0]]
+                    to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.operandList[0] == i.get_uses()[0]]
         for i in to_remove:
             bb.remove_inst(i)
 
