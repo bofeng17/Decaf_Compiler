@@ -1,4 +1,4 @@
-from codegen import IR,Label,IR_Method
+from codegen import IR,Label,IR_Method,instrSelection
 from absmc import class_layouts,static_area,build_basic_blocks,convert_to_ssa, Reg_allocator
 
 classtable = {}  # initially empty dictionary of classes.
@@ -348,6 +348,9 @@ class Method:
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)#for printing code
         self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
+        self.machinecode = instrSelection(self.ir_method.basic_blocks,self.ir_method.stack_layout,self.ir_method.reg_allocator)
+        for mc in self.machinecode:
+            print mc
         # self.reg_allocator = None
 
     def printCode(self):
@@ -403,6 +406,9 @@ class Constructor:
         self.basic_blocks = self.ssa_basic_blocks
         self.reg_allocator = Reg_allocator(self.basic_blocks)
         self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
+        self.machinecode = instrSelection(self.ir_method.basic_blocks,self.ir_method.stack_layout,self.ir_method.reg_allocator)
+        for mc in self.machinecode:
+            print mc
         # self.reg_allocator = None
 
     def printCode(self):
@@ -1508,11 +1514,11 @@ class MethodInvocationExpr(Expr):
             rest_t.append(IR('restore',['t%d'%(t_reg_cnt-i)],cmt))
         self.t = generate_new_temp()
 
-        call_ret = [IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt)]
+        call = [IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt)]
         if self.method.rtype.typename != 'void':
-            call_ret.append(IR('move',[self.t,'a0'],cmt))
+            ret_val = [IR('move',[self.t,'a0'],cmt)]
 
-        self.code += save_a+save_t+move_a+ call_ret +rest_t+rest_a
+        self.code += save_a+save_t+move_a+ call +rest_t+rest_a+ ret_val
 
 
 class NewObjectExpr(Expr):
