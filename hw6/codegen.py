@@ -376,8 +376,8 @@ class PHI_Node():
 def emit_code(name):
     absmc.g_scan_static()
     absmc.g_obtain_cls_layouts()
-    # import sys
-    # sys.stdout = open(name+".asm", "w")
+    import sys
+    sys.stdout = open(name+".asm", "w")
     print ".data"
     print "sap:"
     print ".space ",str(4*absmc.static_area[0])

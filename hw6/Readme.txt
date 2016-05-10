@@ -1,4 +1,32 @@
-README.txt:	this file
+README.txt:
+
+*Plus since hw5:
+1)This compiler has SSA support, 
+inside absmc.py  convert_to_SSA function
+
+2)analyses.py
+Reaching definition
+Dominator tree+immediate dominator analysis
+liveness analyses
+
+3)inside codegen.py are the data structures of intermediate code
+IR, PHI-NODE, BasicBlock, IR_Method
+
+
+4)Register allocation uses the optimal allocation inherited by SSA code nature
+
+5)Instrction selection translate the IR with regs allocated into MIPS code
+
+6)Only static data are allocated in .data section, new object and new array are allocated using sbrk()
+
+
+
+
+
+
+
+
+
 decaflexer.py	PLY/lex specification of Decaf tokens.
 		Also defines "errorflag" used to signal error during scanning/parsing.
 decafparser.py	PLY/yacc specification of Decaf grammar.
