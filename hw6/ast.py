@@ -360,6 +360,7 @@ class Method:
         print Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)
         # for b in self.basic_blocks:
         #     b.print_bb(self.reg_allocator)
+        # print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
         for mc in self.machinecode:
             print mc
 
@@ -416,6 +417,7 @@ class Constructor:
         print Label("C_{0}".format(self.id),"Constructor", indent=0)
         # for b in self.basic_blocks:
         #     b.print_bb(self.reg_allocator)
+        # print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
         for mc in self.machinecode:
             print mc
 

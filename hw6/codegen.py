@@ -446,7 +446,7 @@ def instrSelection(bb_list, AR, reg_allocator):
             # if def spilled
             def_spilled = True
             def_spilled_ARoffset = mem_s_ir[ir]
-            ir = IR(ir.opcode,['$v1',ir.operandList[1:]],ir.comment)
+            ir = IR(ir.opcode,['$v1']+ir.operandList[1:],ir.comment)
 
         if isinstance(ir, PHI_Node):
             offset = mem_l_ir[ir][0][1]
@@ -456,26 +456,27 @@ def instrSelection(bb_list, AR, reg_allocator):
             if ir in mem_l_ir:
                 # if one or more use spilled
                 spilled_uses = mem_l_ir[ir]
-
-                ir_def = ir.get_def()
-                ir_use = ir.get_uses()
+                # op_ls = ir.operandList[pos]
 
                 use_spilled_cnt = 0
                 for pos,offset in spilled_uses:
                     r_reg = reserved_reg[use_spilled_cnt]
-                    if pos == 0:
-                        ir = IR(ir.opcode,ir_def+[r_reg,ir_use[1:]],ir.comment)
-                    elif pos == 1:
-                        if len(ir_use) == 2:
-                            ir = IR(ir.opcode,ir_def+[ir_use[0],r_reg],ir.comment)
-                        else:
-                            assert len(ir_use == 3)
-                            ir = IR(ir.opcode,ir_def+[ir_use[0],r_reg,ir_use[2]],ir.comment)
-                    else:
-                        assert pos == 2
-                        ir = IR(ir.opcode,ir_def+[ir_use[-1],r_reg],ir.comment)
 
-                    machine_code += ['lw',[r_reg,'$fp',str(-offset)]]
+                    ir = IR(ir.opcode,ir.operandList,ir.comment)
+                    ir.operandList[pos] = r_reg
+                    # if pos == 0:
+                    #     ir = IR(ir.opcode,[r_reg]+op_ls[1:],ir.comment)
+                    # elif pos == 1:
+                    #     if len(op_ls) == 2:
+                    #         ir = IR(ir.opcode,op_ls[0]+[r_reg],ir.comment)
+                    #     else:
+                    #         assert len(op_ls) == 3
+                    #         ir = IR(ir.opcode,op_ls[0]+[r_reg]+[op_ls[2]],ir.comment)
+                    # else:
+                    #     assert pos == 2
+                    #     ir = IR(ir.opcode,op_ls[:-1]+[r_reg],ir.comment)
+
+                    machine_code += [MIPSCode('lw',[r_reg,'$fp',str(-offset)])]
 
                     use_spilled_cnt += 1
 
@@ -496,7 +497,7 @@ def instrSelection(bb_list, AR, reg_allocator):
                     # optimization
                     o1 = reg_allocator.v2p(ir.operandList[0])
                     o2 = reg_allocator.v2p(ir.operandList[1])
-                    if not (o1 != 'a' and o1 == o2):
+                    if not (o1[0] != 'a' and o1 == o2):
                         machine_code += [MIPSCode(cm[opcode],operand)]
 
             cm = {'move_immed_i':'li','iadd':'add','isub':'sub'}
@@ -574,7 +575,7 @@ def instrSelection(bb_list, AR, reg_allocator):
 
         # add sw instr if def_spilled
         if def_spilled:
-            machine_code += [MIPSCode('sw',['$v1','fp',def_spilled_ARoffset])]
+            machine_code += [MIPSCode('sw',['$v1','$fp',def_spilled_ARoffset])]
 
     # v2p
     for mc in machine_code:
