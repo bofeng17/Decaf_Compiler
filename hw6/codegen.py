@@ -1,5 +1,5 @@
 import ast
-import absmc,analyses
+import absmc
 
 class IR():
     def __init__(self, opcode, operandList, comment=""):
@@ -496,7 +496,7 @@ def instrSelection(bb_list, AR, reg_allocator):
                     # optimization
                     o1 = reg_allocator.v2p(ir.operandList[0])
                     o2 = reg_allocator.v2p(ir.operandList[1])
-                    if not (o1 != 'a' and o1 == o2):
+                    if not (o1[0] != 'a' and o1 == o2):
                         machine_code += [MIPSCode(cm[opcode],operand)]
 
             cm = {'move_immed_i':'li','iadd':'add','isub':'sub'}
