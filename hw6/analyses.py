@@ -23,7 +23,7 @@ class ReachingDef():
             self.middle_value[1][b] = [in_set,out_set]
         self.iterate(first=True)
     def get_gen_set(self, b):
-        return set([x for x in b.insts if len(x.get_def())>0 and x.get_def()[0] not in [t.get_def()[0] for t in b.insts[b.insts.index(x)+1:] if len(t.get_def())>0]])
+        return set([x for x in b.insts if  len(x.get_def())>0 and x.get_def()[0] not in [t.get_def()[0] for t in b.insts[b.insts.index(x)+1:] if len(t.get_def())>0]])
     def get_kill_set(self, b):
         cur_IN = self.middle_value[1][b][0]
         cur_gen = self.get_gen_set(b)
@@ -41,7 +41,7 @@ class ReachingDef():
             self.middle_value[1][bb][1] = (self.middle_value[1][bb][0]-self.get_kill_set(bb)) | self.get_gen_set(bb)
             converged = converged and not has_change(self.middle_value[1][bb][1],before)
 #Comment this out, dont'delete
-            # if(bb.label=='BBL_1' and False ):
+            # if(bb.label=='BBL_5'):
                 # print '\t\t\t\tIN============--------------------======='
                 # for i in self.middle_value[1][bb][0]:
                     # print "\t\t\t\t",i.basic_block.label, i
@@ -127,7 +127,7 @@ class Liveness():
             else:
                 self.middle_value[0] = False
 
-            # if(bb.label=='BBL_6' and not self.ssa ):
+            # if(bb.label=='BBL_5' and self.ssa ):
                 # for i in bb.insts:
                     # print i
                     # print '\t\t\t\tOUT=====***************************======='
@@ -176,36 +176,37 @@ class DominatorTree():
         worklist = [self.root]
         while(len(worklist)>0):
             i_children = []#cur_cur's idomtees
+            cur_node = worklist.pop(0)
             for i in tmp:
                 remain=set()
-                remain = tmp[i] - set(worklist)
+                remain = tmp[i] - set([cur_node])
                 tmp[i] = remain
-                if(len(remain) ==1):
+                if(i not in worklist and len(remain) ==1):
                     if remain.pop() is i:
                         i_children+=[i]
                     else:
                         assert(False)
-            # print i, "my_children:",i_children
-            # for i in i_children:print i
+            # print cur_node, "my_children:",
+            # for x in i_children:print x
             # print "-----------"
-            map(lambda x: x.set_idomtees(i_children), [worklist.pop(0)])
+            map(lambda x: x.set_idomtees(i_children), [cur_node])
             worklist += list(i_children)
 
         for i in  self.all_nodes:
             # if(not isinstance(i,codegen.IR) or i.opcode !='jmp'):
                 # continue
-            if(i.basic_block.label in ['BBL_0', 'BBL_16'] or True):
+            if(i.basic_block.label not in ['BBL_5']):
                 continue
-            print "...............",i
-            print "idomtors:",len(i.idomtors)
-            print "->",
-            for x in i.idomtors: print x,
-            print ""
-            print "idomtees:",len(i.idomtees)
-            print "->",
-            for x in i.idomtees: print x,
-            print ""
-            print""
+            # print "...............",i
+            # print "idomtors:",len(i.idomtors)
+            # print "->",
+            # for x in i.idomtors: print x,
+            # print ""
+            # print "idomtees:",len(i.idomtees)
+            # print "->",
+            # for x in i.idomtees: print x,
+            # print ""
+            # print""
 
 
 
