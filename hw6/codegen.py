@@ -130,18 +130,19 @@ class IR_Method():
         self.stack_layout = [0,[]]
         self.reg_allocator = allocator
         self.harvest_layout()
-        # self.print_layout()
+        self.print_layout()
 
     def get_basic_blocks(self):
         return self.basic_blocks
 
     def print_layout(self):
-        print "Method:"+self.name,"***********"
-        print "size:"+str(self.stack_layout[0])
-        print "{0:>20}{1:>50}{2:>20}{3:>20}{4:>30}{5:>40}".format('IR','vreg','off','L/S','phi','pos')
+        import sys
+        print >> sys.stderr,"Method:"+self.name,"***********"
+        print >> sys.stderr,"size:"+str(self.stack_layout[0])
+        print >> sys.stderr,"{0:>20}{1:>50}{2:>20}{3:>20}{4:>30}{5:>40}".format('IR','vreg','off','L/S','phi','pos')
         for tup in self.stack_layout[1]:
             tmp = str(tup[0])+tup[0].basic_block.label
-            print "{0:>50}{1:>20}{2:>20}{3:>20}{4:>40}{5:>30}".format(tmp,tup[1],tup[2],tup[3],tup[4],tup[5])
+            print >> sys.stderr,"{0:>50}{1:>20}{2:>20}{3:>20}{4:>40}{5:>30}".format(tmp,tup[1],tup[2],tup[3],tup[4],tup[5])
 
 
     #stack_layout = [frame_size, [(IR_if_any,vreg,off,L/S, for_which_phi_if_any, pos)]]
