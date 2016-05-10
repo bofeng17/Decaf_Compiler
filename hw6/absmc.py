@@ -521,7 +521,7 @@ class Reg_allocator():
             new_reg = self.get_unused(used_regs)
             if(new_reg is None):
                 #spilling
-                node.basic_block.method.set_spilling(node.get_def()[0], node)
+                node.basic_block.method.set_spilling(node, node.get_def()[0], 'store', None)
             else:
                 self.mapping[node.get_def()[0]] = new_reg
         for sub in node.idomtees:
