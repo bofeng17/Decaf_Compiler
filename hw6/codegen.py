@@ -130,7 +130,7 @@ class IR_Method():
         self.stack_layout = [0,[]]
         self.reg_allocator = allocator
         self.harvest_layout()
-        self.print_layout()
+        # self.print_layout()
 
     def get_basic_blocks(self):
         return self.basic_blocks
