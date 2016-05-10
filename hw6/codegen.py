@@ -553,15 +553,20 @@ def instrSelection(bb_list, AR, reg_allocator):
             cm = {'halloc':'syscall'}
             if opcode in cm: # TODO: check correctness of saving $a0
                 machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',['$a0','$sp','0']),\
-                                 MIPSCode('li',['$v0','9']),MIPSCode('move',['$a0',operand[1]]),\
+                                 MIPSCode('li',['$v0','9']),MIPSCode('li',['$v1','4']),\
+                                 MIPSCode('mult',[operand[1],'$v1']),MIPSCode('mflo',['$a0']),\
                                  MIPSCode(cm[opcode],[]),MIPSCode('move',[operand[0],'$v0']),\
                                  MIPSCode('lw',['$a0','$sp','0']),MIPSCode('addi',['$sp','$sp','4'])]
             cm = {'hload':'lw'}
             if opcode in cm:
-                machine_code += [MIPSCode('add',['$v0',operand[1],operand[2]]),MIPSCode(cm[opcode],[operand[0],'$v0','0'])]
+                machine_code += [MIPSCode('li',['$v1','4']),MIPSCode('mult',[operand[2],'$v1']),\
+                                 MIPSCode('mflo',['$v1']),MIPSCode('add',['$v0',operand[1],'$v1']),\
+                                 MIPSCode(cm[opcode],[operand[0],'$v0','0'])]
             cm = {'hstore':'sw'}
             if opcode in cm:
-                machine_code += [MIPSCode('add',['$v0',operand[0],operand[1]]),MIPSCode(cm[opcode],[operand[2],'$v0','0'])]
+                machine_code += [MIPSCode('li',['$v1','4']),MIPSCode('mult',[operand[1],'$v1']),\
+                                 MIPSCode('mflo',['$v1']),MIPSCode('add',['$v0',operand[0],'$v1']),\
+                                 MIPSCode(cm[opcode],[operand[2],'$v0','0'])]
 
             cm = {'call':'jal'}
             if opcode in cm:
