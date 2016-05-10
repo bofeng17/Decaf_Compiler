@@ -1,5 +1,5 @@
 import ast
-import absmc,analyses
+import absmc
 
 class IR():
     def __init__(self, opcode, operandList, comment=""):

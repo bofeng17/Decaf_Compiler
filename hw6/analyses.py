@@ -71,8 +71,9 @@ class ReachingDef():
 #results: {S,INs,OUTs}
 #middle_value: [converged, {S, [INs,OUTs]}]
 class Liveness():
-    def __init__(self, BBLs):
+    def __init__(self, BBLs, ssa=True):
         self.basic_blocks = BBLs
+        self.ssa =ssa
         self.initialize()
         self.compute()
 
@@ -100,8 +101,12 @@ class Liveness():
         self.iterate(first=True)
 
     def get_def_set(self, i):
+        if(not self.ssa and isinstance(i,codegen.IR) and i.opcode in['save','restore']):
+            return set([])
         return set([x for x in i.get_def() if x[0]=='t'])
     def get_use_set(self,i):
+        if(not self.ssa and isinstance(i,codegen.IR) and i.opcode in['save','restore']):
+            return set([])
         if(isinstance(i,codegen.PHI_Node)):
             return set([])
         else:

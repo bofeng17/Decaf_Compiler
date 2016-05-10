@@ -358,11 +358,11 @@ class Method:
         if self.name == 'main':
             print Label("main","Method",indent=0)
         print Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)
-        for b in self.basic_blocks:
-            b.print_bb(self.reg_allocator)
-        print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
-        # for mc in self.machinecode:
-        #     print mc
+        # for b in self.basic_blocks:
+        #     b.print_bb(self.reg_allocator)
+        # print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
+        for mc in self.machinecode:
+            print mc
 
 class Constructor:
     """A class encoding constructors and their attributes in Decaf"""
@@ -415,11 +415,11 @@ class Constructor:
         # for i_or_l in self.code:
             # print i_or_l
         print Label("C_{0}".format(self.id),"Constructor", indent=0)
-        for b in self.basic_blocks:
-            b.print_bb(self.reg_allocator)
-        print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
-        # for mc in self.machinecode:
-        #     print mc
+        # for b in self.basic_blocks:
+        #     b.print_bb(self.reg_allocator)
+        # print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
+        for mc in self.machinecode:
+            print mc
 
     def printout(self):
         print "CONSTRUCTOR: {0}, {1}".format(self.id, self.visibility)

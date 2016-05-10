@@ -269,18 +269,19 @@ def get_new_block_label():
 
 
 def remove_unneeded_saves(basic_blocks):
-    liveness = analyses.Liveness(basic_blocks)
+    liveness = analyses.Liveness(basic_blocks, ssa=False)
     for bb in basic_blocks:
+        # bb.print_bb(None)
         to_remove = []
         for i in bb.insts:
             if isinstance(i, codegen.IR) and i.opcode == 'save':
                 out = liveness.get_OUT(i)
-                if i.get_uses()[0] not in out:
+                if len(i.get_uses()) > 0 and i.get_uses()[0] not in out:
                     if i.get_uses()[0][0] == 'a' and int(i.get_uses()[0][1])<4:
                         continue
-                    # print "extra save:", i
+                    print "additional save:",i, out
                     to_remove += [i]
-                    to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.get_def()[0] == i.get_uses()[0]]
+                    to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.operandList[0] == i.get_uses()[0]]
         for i in to_remove:
             bb.remove_inst(i)
 
@@ -288,6 +289,25 @@ def remove_unneeded_saves(basic_blocks):
 
 
 def convert_to_ssa(basic_blocks):
+    # print "NEW METHOD=======================--------------------------------------------===="
+    # liveness = analyses.Liveness(basic_blocks)
+    # for b in basic_blocks:
+        # for ii in b.insts:
+            # print '----------------------------------------------------------------'
+            # print ii.basic_block.label, ii
+            # print 'OUT=====***************************======='
+            # for i in liveness.get_OUT(ii):print i,
+            # print ""
+            # print 'DEF======================================='
+            # for i in ii.get_def():print i,
+            # print ""
+            # print 'USE========++++++++++++++++=============='
+            # for i in ii.get_uses():print i,
+            # print ""
+            # print 'IN============--------------------======='
+            # for i in liveness.get_IN(ii):print i,
+            # print ""
+
     remove_unneeded_saves(basic_blocks)
     no_more_phi = True
     first = True
@@ -509,8 +529,8 @@ class Reg_allocator():
         return vreg
     def allocate(self, node):
         out_set = self.liveness.get_OUT(node)
-        # print node.basic_block.label, node, node.get_def(), out_set, node.basic_block.label
-        # print self.mapping
+        print node.basic_block.label, node, node.get_def(), out_set, node.basic_block.label
+        print self.mapping
         if node is None:
             return
         if len(node.get_def())>0 and node.get_def()[0][0]=='t':
