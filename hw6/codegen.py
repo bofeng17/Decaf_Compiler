@@ -441,18 +441,19 @@ def instrSelection(bb_list, AR, reg_allocator):
     machine_code += mc
 
     for ir in ir_code:
-        def_spilled = False
-        if ir in mem_s_ir:
-            # if def spilled
-            def_spilled = True
-            def_spilled_ARoffset = mem_s_ir[ir]
-            ir = IR(ir.opcode,['$v1']+ir.operandList[1:],ir.comment)
-
         if isinstance(ir, PHI_Node):
             offset = mem_l_ir[ir][0][1]
             machine_code += [MIPSCode('lw',['$v1','$fp',str(-offset)]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
 
         elif isinstance(ir, IR):
+            def_spilled = False
+            if ir in mem_s_ir:
+                # if def spilled
+                def_spilled = True
+                def_spilled_ARoffset = mem_s_ir[ir]
+                ir = IR(ir.opcode,['$v1']+ir.operandList[1:],ir.comment)
+
+
             if ir in mem_l_ir:
                 # if one or more use spilled
                 spilled_uses = mem_l_ir[ir]
@@ -568,14 +569,14 @@ def instrSelection(bb_list, AR, reg_allocator):
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],'$sp','0']),MIPSCode('addi',['$sp','$sp','4'])]
 
+
+            # add sw instr if def_spilled
+            if def_spilled:
+                machine_code += [MIPSCode('sw',['$v1','$fp',str(-def_spilled_ARoffset)])]
+
         else: # label
             assert isinstance(ir,str)
             machine_code.append(ir+':')
-
-
-        # add sw instr if def_spilled
-        if def_spilled:
-            machine_code += [MIPSCode('sw',['$v1','$fp',def_spilled_ARoffset])]
 
     # v2p
     for mc in machine_code:
