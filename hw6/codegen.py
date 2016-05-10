@@ -140,7 +140,8 @@ class IR_Method():
         print "size:"+str(self.stack_layout[0])
         print "{0:>20}{1:>50}{2:>20}{3:>20}{4:>30}{5:>40}".format('IR','vreg','off','L/S','phi','pos')
         for tup in self.stack_layout[1]:
-            print "{0:>50}{1:>20}{2:>20}{3:>20}{4:>40}{5:>30}".format(tup[0],tup[1],tup[2],tup[3],tup[4],tup[5])
+            tmp = str(tup[0])+tup[0].basic_block.label
+            print "{0:>50}{1:>20}{2:>20}{3:>20}{4:>40}{5:>30}".format(tmp,tup[1],tup[2],tup[3],tup[4],tup[5])
 
 
     #stack_layout = [frame_size, [(IR_if_any,vreg,off,L/S, for_which_phi_if_any, pos)]]
@@ -442,8 +443,14 @@ def instrSelection(bb_list, AR, reg_allocator):
 
     for ir in ir_code:
         if isinstance(ir, PHI_Node):
-            offset = mem_l_ir[ir][0][1]
-            machine_code += [MIPSCode('lw',['$v1','$fp',str(-offset)]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
+            l_off = mem_l_ir[ir][0][1]
+            machine_code += [MIPSCode('lw',['$v1','$fp',str(-l_off)]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
+            if ir in mem_s_ir:
+                # if def spilled
+                s_off = mem_s_ir[ir]
+                def_spilled_ARoffset = mem_s_ir[ir]
+                machine_code += [MIPSCode('sw',[ir.get_def()[0],'$fp',str(-s_off)])]
+
 
         elif isinstance(ir, IR):
             def_spilled = False
@@ -465,17 +472,6 @@ def instrSelection(bb_list, AR, reg_allocator):
 
                     ir = IR(ir.opcode,ir.operandList,ir.comment)
                     ir.operandList[pos] = r_reg
-                    # if pos == 0:
-                    #     ir = IR(ir.opcode,[r_reg]+op_ls[1:],ir.comment)
-                    # elif pos == 1:
-                    #     if len(op_ls) == 2:
-                    #         ir = IR(ir.opcode,op_ls[0]+[r_reg],ir.comment)
-                    #     else:
-                    #         assert len(op_ls) == 3
-                    #         ir = IR(ir.opcode,op_ls[0]+[r_reg]+[op_ls[2]],ir.comment)
-                    # else:
-                    #     assert pos == 2
-                    #     ir = IR(ir.opcode,op_ls[:-1]+[r_reg],ir.comment)
 
                     machine_code += [MIPSCode('lw',[r_reg,'$fp',str(-offset)])]
 
