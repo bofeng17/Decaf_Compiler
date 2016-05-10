@@ -360,6 +360,7 @@ class Method:
         print Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)
         # for b in self.basic_blocks:
         #     b.print_bb(self.reg_allocator)
+        # print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
         for mc in self.machinecode:
             print mc
 
@@ -416,6 +417,7 @@ class Constructor:
         print Label("C_{0}".format(self.id),"Constructor", indent=0)
         # for b in self.basic_blocks:
         #     b.print_bb(self.reg_allocator)
+        # print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& MIPS:"
         for mc in self.machinecode:
             print mc
 
@@ -1518,7 +1520,7 @@ class MethodInvocationExpr(Expr):
         if self.method.rtype.typename != 'void':
             ret_val = [IR('move',[self.t,'a0'],cmt)]
 
-        self.code += save_a+save_t+move_a+ call +rest_t+rest_a+ ret_val
+        self.code += save_a+save_t+move_a+ call +rest_t+ ret_val +rest_a
 
 
 class NewObjectExpr(Expr):
