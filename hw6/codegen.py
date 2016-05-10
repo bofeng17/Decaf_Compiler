@@ -403,8 +403,7 @@ def set_defuse(ir):
     if ir.opcode in ['save']:
         ir.use = list([0])
     if ir.opcode in ['restore']:
-        # ir.define = list([0])
-        pass
+        ir.define = list([0])
     if ir.opcode in ['move']:
         ir.define = list([0])
         ir.use = list([1])
