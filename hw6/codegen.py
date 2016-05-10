@@ -50,7 +50,7 @@ class IR():
             self.operandList = [self.reg_mapping.v2p(str(x)) for x in self.operandList]
         else:
             self.operandList = [str(x) for x in self.operandList]
-        return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '')
+        return "        {0} {1}{2:>14}".format(self.opcode, ', '.join(self.operandList), '')
         # return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
 
     def set_start(self):
@@ -126,8 +126,8 @@ class IR_Method():
         self.basic_blocks = basic_blocks
         for x in self.basic_blocks:
             x.method = self
-        #stack_layout = [frame_size, mapping{stack_saved_reg ,[(offset, IR_or_PhiNode)]}]
-        self.stack_layout = [0,{}]
+        #stack_layout = [frame_size, [(IR*,vreg*,off*,L/S*, for_which_phi_if_any, pos)]]
+        self.stack_layout = [0,[]]
         self.reg_allocator = allocator
         self.harvest_layout()
         self.print_layout()
@@ -136,38 +136,69 @@ class IR_Method():
         return self.basic_blocks
 
     def print_layout(self):
-        # print "Method:"+self.name
-        # print "size:"+str(self.stack_layout[0])
-        for reg in self.stack_layout[1]:
-            print "reg to spill:"+self.reg_allocator.v2p(reg)
-            for tup in self.stack_layout[1][reg]:
-                print "off:{0},IR:{1}".format(tup[0],tup[1])
+        print "Method:"+self.name,"***********"
+        print "size:"+str(self.stack_layout[0])
+        print "{0:>20}{1:>50}{2:>20}{3:>20}{4:>30}{5:>40}".format('IR','vreg','off','L/S','phi','pos')
+        for tup in self.stack_layout[1]:
+            print "{0:>50}{1:>20}{2:>20}{3:>20}{4:>40}{5:>30}".format(tup[0],tup[1],tup[2],tup[3],tup[4],tup[5])
 
 
+    #stack_layout = [frame_size, [(IR_if_any,vreg,off,L/S, for_which_phi_if_any, pos)]]
+    #NOTE: assumption, only for load we use pos, other cases, pos is 999999999
     def harvest_layout(self):
+        reg_map = self.reg_allocator
         for b in self.basic_blocks:
             for i in b.insts:
-                if len(i.get_def())<1:
-                    continue
-                if self.reg_allocator.v2p(i.get_def()[0]) in self.reg_allocator.callee_save_regs or len([x for x in i.get_def_refs() if isinstance(x, PHI_Node)]) > 0:
-                    self.set_spilling(i.get_def()[0], i)
+                if(len(i.get_def())>0):
+                    if(reg_map.v2p(i.get_def()[0]) in reg_map.callee_save_regs):
+                        self.set_spilling(None, i.get_def()[0], 'store',None, 999999999999)#callee save, pos doesn't matter
+                    for phi_usr in [x for x in i.get_def_refs() if isinstance(x, PHI_Node)]:
+                        if(not isinstance(i, PHI_Node)):
+                            self.set_spilling(i, i.get_def()[0],'store',phi_usr, 999999999999999)#phi-def IRs
+                        else:
+                            self.set_spilling(i, i.t ,'store',phi_usr, 999999999999999)#phi-def IRs
 
-    def set_spilling(self, reg, containing_node):
-        increase = 4
-        off_to_fp = 4
-        if self.stack_layout[1].has_key(reg):
-            self.stack_layout[1][reg] += [(self.stack_layout[0]+off_to_fp, containing_node)]
-        else:
-            self.stack_layout[1][reg] = [(self.stack_layout[0]+off_to_fp, containing_node)]
 
-        self.stack_layout[0] += increase
-        # #NOTE: reg can be vreg or non-t-but-p regs
-        # if reg != 'ra':
-            # increase = 4
-        # else:
-            # increase = 8
-            # if(self.stack_layout[0]%8 != 0):
-                # self.stack_layout[0] += 4
+                if(i.comment not in ['MethodInvocationExpr', 'NewObjectExpr']):#a4- defs and uses
+                    if(isinstance(i, PHI_Node)):
+                        continue
+                    if(len(i.get_def())>0 and i.get_def()[0][0] == 'a' and int(i.get_def()[0][1:])>3):
+                        self.set_spilling(i, i.get_def()[0], 'store',None, i.define[0])
+                    for pos in i.use:
+                        if i.operandList[pos][0]=='a' and int(i.operandList[pos][1:])>3:
+                            self.set_spilling(i, i.operandList[pos],'load',None,pos)
+
+
+
+
+
+
+    def set_spilling(self, containing_node, vreg, l_or_s, phi, pos):
+        curr_size = self.stack_layout[0]
+        layout= self.stack_layout[1]#[(IR_if_any*,vreg*,off*,L/S*, for_which_phi_if_any, pos)]
+
+        fp_local_off = 4
+        if phi is not None:
+            been_defined = [x for x in self.stack_layout[1] if phi is x[-2] and x[-3]=='store']
+            assert(len(been_defined)<2)#1 or 0
+            if(len(been_defined)==1):
+                self.stack_layout[1] = layout + [(containing_node,vreg, been_defined[0][-4],'store',phi, pos)]#same offset
+            else:#
+                layout = layout + [(phi, phi.t, fp_local_off+curr_size,'load',None, 99999999999)]
+                self.stack_layout[1] = layout + [(containing_node,vreg, fp_local_off + curr_size,'store',phi, pos)]#new offset
+                curr_size+=4
+        else:#spilling or a4 access
+            if vreg[0] == 'a':
+                self.stack_layout[1] = layout + [(containing_node, vreg, -4*int(vreg[1])+8, l_or_s, phi, pos)]
+            else:
+                assert(l_or_s == 'store')
+                for usr in containing_node.get_def_refs():
+                    for cur_pos in containing_node.user_index_look_up[usr]:
+                        layout = layout + [(usr, vreg, fp_local_off + curr_size, 'load', phi, cur_pos)]
+                self.stack_layout[1] = layout + [(containing_node, vreg, fp_local_off + curr_size, 'store', phi, pos)]
+                curr_size += 4
+        self.stack_layout[0] = curr_size
+
 
 
 
@@ -258,6 +289,7 @@ class PHI_Node():
         self.preds = []
         self.succs = []
         self.basic_block = basic_block
+        self.comment = 'phi-node'
 
         self.start_inst = False
         self.terminate_inst = False
@@ -402,7 +434,6 @@ def instrSelection(bb_list, AR, reg_allocator):
     reserved_reg = ['$v1','$s6','$s7']
 
     machine_code = []
-    
     # insert prologue, pre-process spill
     # mem_s_ir = {ir: AR_offset}
     # mem_l_ir = {ir: [[pos,AR_offset],]}
@@ -430,7 +461,7 @@ def instrSelection(bb_list, AR, reg_allocator):
                 ir_use = ir.get_uses()
 
                 use_spilled_cnt = 0
-                for pos,offset in spilled_uses: 
+                for pos,offset in spilled_uses:
                     r_reg = reserved_reg[use_spilled_cnt]
                     if pos == 0:
                         ir = IR(ir.opcode,ir_def+[r_reg,ir_use[1:]],ir.comment)
@@ -443,11 +474,11 @@ def instrSelection(bb_list, AR, reg_allocator):
                     else:
                         assert pos == 2
                         ir = IR(ir.opcode,ir_def+[ir_use[-1],r_reg],ir.comment)
-                    
+
                     machine_code += ['lw',[r_reg,'$fp',str(-offset)]]
 
                     use_spilled_cnt += 1
- 
+
 
             opcode = ir.opcode
             operand = ir.operandList
@@ -460,7 +491,7 @@ def instrSelection(bb_list, AR, reg_allocator):
                     # e.g. move a4, $t1 before call instr
                     machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',[ir.operandList[1],'$sp','0'])]
                     a_reg_cnt += 1
-                else: 
+                else:
                     # normal move
                     # optimization
                     o1 = reg_allocator.v2p(ir.operandList[0])
@@ -468,7 +499,7 @@ def instrSelection(bb_list, AR, reg_allocator):
                     if not (o1 != 'a' and o1 == o2):
                         machine_code += [MIPSCode(cm[opcode],operand)]
 
-            cm = {'move_immed_i':'li','iadd':'add','isub':'sub'} 
+            cm = {'move_immed_i':'li','iadd':'add','isub':'sub'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],operand)]
 
@@ -483,7 +514,7 @@ def instrSelection(bb_list, AR, reg_allocator):
                     machine_code += [MIPSCode('mflo',[operand[0]])]
                 else:
                     machine_code += [MIPSCode('mfhi',[operand[0]])]
-            
+
             cm = {'igt':'slt'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],operand[2],operand[1]])]
@@ -503,7 +534,7 @@ def instrSelection(bb_list, AR, reg_allocator):
             cm = {'jmp':'j'}
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0]])]
-            
+
             cm = {'halloc':'syscall'}
             if opcode in cm: # TODO: check correctness of saving $a0
                 machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',['$a0','$sp','0']),\
@@ -548,13 +579,12 @@ def instrSelection(bb_list, AR, reg_allocator):
     # v2p
     for mc in machine_code:
         if isinstance(mc,MIPSCode):
-            mc.MIPSv2p(reg_allocator) 
+            mc.MIPSv2p(reg_allocator)
 
     return machine_code
 
 def insert_prologue(AR):
     #AR = [frame_size, mapping{stack_saved_reg: [offset, IR_or_PhiNode]}]
-    callee_saved_reg = []
     mem_s_ir = {} # {ir: AR_offset}
     mem_l_ir = {} # {ir: [[pos,AR_offset],]}
 
@@ -568,7 +598,7 @@ def insert_prologue(AR):
     for ir_ref,vreg,offset,action,phi_ref,pos in stack_layout:
         if ir_ref is None:
             # callee-saved registers
-            machine_code += [MIPS('sw',[vreg,'$fp',offset])]
+            machine_code += [MIPSCode('sw',[vreg,'$fp',offset])]
         else:
             # spilled registers or phi nodes
             if action == 'store':
@@ -589,7 +619,7 @@ def insert_epilogue(AR):
     for ir_ref,vreg,offset,action,phi_ref,pos in stack_layout:
         if ir_ref is None:
             # callee-saved registers
-            machine_code += [MIPS('lw',[vreg,'$fp',offset])]
+            machine_code += [MIPSCode('lw',[vreg,'$fp',offset])]
     # destroy stack frame, pop $fp, pop $ra
     machine_code += [MIPSCode('addi',['$sp','$sp',str(AR[0]+8)]),\
                      MIPSCode('lw',['$ra','$sp','-4']),MIPSCode('lw',['$fp','$sp','-8'])]
@@ -602,7 +632,7 @@ class MIPSCode:
         if not isinstance(operandList,list):
             print "operandList %s is not a list!" % operandList
         self.operandList = operandList
-        
+
         self.comment = comment
         if comment is not '':
             self.comment = '# '+comment
