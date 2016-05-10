@@ -127,6 +127,23 @@ class Liveness():
             else:
                 self.middle_value[0] = False
 
+            # if(bb.label=='BBL_6' and not self.ssa ):
+                # for i in bb.insts:
+                    # print i
+                    # print '\t\t\t\tOUT=====***************************======='
+                    # for i2 in self.middle_value[1][i][1]:
+                        # print "\t\t\t\t",i2
+                    # print '\t\t\t\tdef======================================='
+                    # for i2 in self.get_def_set(i):
+                        # print "\t\t\t\t",i2
+                    # print '\t\t\t\tuse========++++++++++++++++=============='
+                    # for i2 in self.get_use_set(i):
+                        # print "\t\t\t\t",i2
+                    # print '\t\t\t\tIN============--------------------======='
+                    # for i2 in self.middle_value[1][i][0]:
+                        # print "\t\t\t\t",i2
+                    # print
+                    # print
 
 #For this analysis, we will directly modify the input IR, assign dominance info to them
 class DominatorTree():
