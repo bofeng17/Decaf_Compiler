@@ -279,7 +279,7 @@ def remove_unneeded_saves(basic_blocks):
                 if len(i.get_uses()) > 0 and i.get_uses()[0] not in out:
                     if i.get_uses()[0][0] == 'a' and int(i.get_uses()[0][1])<4:
                         continue
-                    print "additional save:",i, out
+                    # print "additional save:",i, out
                     to_remove += [i]
                     to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.operandList[0] == i.get_uses()[0]]
         for i in to_remove:
@@ -529,8 +529,8 @@ class Reg_allocator():
         return vreg
     def allocate(self, node):
         out_set = self.liveness.get_OUT(node)
-        print node.basic_block.label, node, node.get_def(), out_set, node.basic_block.label
-        print self.mapping
+        # print node.basic_block.label, node, node.get_def(), out_set, node.basic_block.label
+        # print self.mapping
         if node is None:
             return
         if len(node.get_def())>0 and node.get_def()[0][0]=='t':

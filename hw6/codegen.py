@@ -438,7 +438,8 @@ def instrSelection(bb_list, AR, reg_allocator):
     # insert prologue, pre-process spill
     # mem_s_ir = {ir: AR_offset}
     # mem_l_ir = {ir: [[pos,AR_offset],]}
-    (mc,mem_s_ir,mem_l_ir) = insert_prologue(AR)
+    # phi_s = [ir]
+    (mc,mem_s_ir,mem_l_ir,phi_s) = insert_prologue(AR)
     machine_code += mc
 
     for ir in ir_code:
@@ -454,11 +455,16 @@ def instrSelection(bb_list, AR, reg_allocator):
 
         elif isinstance(ir, IR):
             def_spilled = False
+            phi_reg = None
             if ir in mem_s_ir:
                 # if def spilled
                 def_spilled = True
                 def_spilled_ARoffset = mem_s_ir[ir]
-                ir = IR(ir.opcode,['$v1']+ir.operandList[1:],ir.comment)
+                if ir in phi_s:
+                    # spill instead of phi
+                    phi_reg = ir.operandList[0]
+                else:
+                    ir = IR(ir.opcode,['$v1']+ir.operandList[1:],ir.comment)
 
 
             if ir in mem_l_ir:
@@ -494,8 +500,9 @@ def instrSelection(bb_list, AR, reg_allocator):
                     # optimization
                     o1 = reg_allocator.v2p(ir.operandList[0])
                     o2 = reg_allocator.v2p(ir.operandList[1])
-                    if not (o1[0] != 'a' and o1 == o2):
-                        machine_code += [MIPSCode(cm[opcode],operand)]
+                    # if not (o1[0] != 'a' and o1 == o2):
+                    #     machine_code += [MIPSCode(cm[opcode],operand)]
+                    machine_code += [MIPSCode(cm[opcode],operand)]
 
             cm = {'move_immed_i':'li','iadd':'add','isub':'sub'}
             if opcode in cm:
@@ -568,7 +575,12 @@ def instrSelection(bb_list, AR, reg_allocator):
 
             # add sw instr if def_spilled
             if def_spilled:
-                machine_code += [MIPSCode('sw',['$v1','$fp',str(-def_spilled_ARoffset)])]
+                if phi_reg is not None:
+                    # Phi
+                    machine_code += [MIPSCode('sw',[phi_reg,'$fp',str(-def_spilled_ARoffset)])]
+                else:
+                    # spill
+                    machine_code += [MIPSCode('sw',['$v1','$fp',str(-def_spilled_ARoffset)])]
 
         else: # label
             assert isinstance(ir,str)
@@ -585,6 +597,7 @@ def insert_prologue(AR):
     #AR = [frame_size, mapping{stack_saved_reg: [offset, IR_or_PhiNode]}]
     mem_s_ir = {} # {ir: AR_offset}
     mem_l_ir = {} # {ir: [[pos,AR_offset],]}
+    phi_s = []
 
     # push $ra, push $fp, allocate stack frame
     machine_code = [MIPSCode('sw',['$ra','$sp','-4']),MIPSCode('sw',['$fp','$sp','-8']),\
@@ -601,6 +614,8 @@ def insert_prologue(AR):
             # spilled registers or phi nodes
             if action == 'store':
                 mem_s_ir[ir_ref] = offset
+                if isinstance(phi_ref,PHI_Node):
+                    phi_s.append(ir_ref)
             else:
                 assert action == 'load'
                 if ir_ref not in mem_l_ir:
@@ -608,7 +623,7 @@ def insert_prologue(AR):
                 else:
                     mem_l_ir[ir_ref].append([pos,offset])
 
-    return machine_code,mem_s_ir,mem_l_ir
+    return machine_code,mem_s_ir,mem_l_ir,phi_s
 
 def insert_epilogue(AR):
     machine_code = []
