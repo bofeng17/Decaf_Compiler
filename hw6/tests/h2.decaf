@@ -18,12 +18,13 @@ class A {
         }else{
             b1=b1+100;
         }    
-
-        return b1;
+        A.x = 10;
+        return b1+A.x;
 
    }
     public static void main () {
         int a,b,c,d,e,f,g,h;
+        A yo;
         a=1;
         b=2;
         c=3;
@@ -31,7 +32,9 @@ class A {
         e=5;
         f=6;
         g=7;
+        yo = new A();
+        yo.o = A.x+10;
         a = A.test_method();
-        a = a+b+c+d+e+f+g;
+        A.x = yo.o+a+b+c+d+e+f+g;
    }
 }

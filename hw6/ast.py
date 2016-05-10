@@ -357,6 +357,7 @@ class Method:
             # print i_or_l
         if self.name == 'main':
             print Label("main","Method",indent=0)
+            print Label("main_entry_point","Method",indent=0)
         print Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)
         # for b in self.basic_blocks:
         #     b.print_bb(self.reg_allocator)

@@ -130,7 +130,7 @@ class IR_Method():
         self.stack_layout = [0,[]]
         self.reg_allocator = allocator
         self.harvest_layout()
-        self.print_layout()
+        # self.print_layout()
 
     def get_basic_blocks(self):
         return self.basic_blocks
@@ -231,6 +231,12 @@ class BasicBlock():
             self.insts[1].preds += [self.insts[0]]
 
     def remove_inst(self, inst):
+        # print "------------------",inst,[inst],self.label
+        # for i in self.insts:
+            # print i
+            # print 'preds[{0}]'.format(','.join(x.__str__() for x in i.preds))
+            # print 'succs[{0}]'.format(','.join(x.__str__() for x in i.succs))
+        # print "================="
         for p in inst.preds:
             for s in inst.succs:
                 p.succs.append(s)
@@ -371,8 +377,11 @@ def emit_code(name):
     absmc.g_scan_static()
     absmc.g_obtain_cls_layouts()
     # import sys
-    # sys.stdout = open(name+".ami", "w")
-    # print ".static_data "+str(absmc.static_area[0])
+    # sys.stdout = open(name+".asm", "w")
+    print ".data"
+    print "sap:"
+    print ".space ",str(4*absmc.static_area[0])
+    print ".text"
     for cid in ast.classtable:
         c = ast.classtable[cid]
         if(not c.builtin):
@@ -500,9 +509,9 @@ def instrSelection(bb_list, AR, reg_allocator):
                     # optimization
                     o1 = reg_allocator.v2p(ir.operandList[0])
                     o2 = reg_allocator.v2p(ir.operandList[1])
-                    # if not (o1[0] != 'a' and o1 == o2):
-                    #     machine_code += [MIPSCode(cm[opcode],operand)]
-                    machine_code += [MIPSCode(cm[opcode],operand)]
+                    if not (o1[0] != 'a' and o1 == o2):
+                        machine_code += [MIPSCode(cm[opcode],operand)]
+                    # machine_code += [MIPSCode(cm[opcode],operand)]
 
             cm = {'move_immed_i':'li','iadd':'add','isub':'sub'}
             if opcode in cm:
@@ -590,6 +599,7 @@ def instrSelection(bb_list, AR, reg_allocator):
     for mc in machine_code:
         if isinstance(mc,MIPSCode):
             mc.MIPSv2p(reg_allocator)
+    machine_code = [MIPSCode('la',[r'$gp','sap'])]+machine_code
 
     return machine_code
 
@@ -668,7 +678,9 @@ class MIPSCode:
         self.operandList = []
         for o in operandList:
             o = reg_allocator.v2p(o)
-            if str(o)[0] in ['v','a','t','s']:
+            if str(o)[0] in ['v','a','t','s','g']:
+                if(str(o)=='sap'):
+                    o = 'gp'
                 o = '$'+o
             self.operandList.append(o)
 

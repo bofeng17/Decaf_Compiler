@@ -269,6 +269,13 @@ def get_new_block_label():
 
 
 def remove_unneeded_saves(basic_blocks):
+    # for bb in basic_blocks:
+        # for each in bb.insts:
+            # print each.start_inst,each.terminate_inst, each, bb.label
+            # print 'preds[{0}]'.format(','.join(x.__str__() for x in each.preds))
+            # print 'succs[{0}]'.format(','.join(x.__str__() for x in each.succs))
+            # print
+            # print
     liveness = analyses.Liveness(basic_blocks, ssa=False)
     for bb in basic_blocks:
         # bb.print_bb(None)
@@ -279,9 +286,10 @@ def remove_unneeded_saves(basic_blocks):
                 if len(i.get_uses()) > 0 and i.get_uses()[0] not in out:
                     if i.get_uses()[0][0] == 'a' and int(i.get_uses()[0][1])<4:
                         continue
-                    # print "additional save:",i, out
+                    # print "additional save:",bb.label,i,[i], out
                     to_remove += [i]
-                    to_remove += [rt for rt in bb.insts if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.operandList[0] == i.get_uses()[0]]
+                    candidates =  [rt for rt in bb.insts[bb.insts.index(i):] if isinstance(rt,codegen.IR) and rt.opcode == 'restore' and rt.operandList[0] == i.get_uses()[0]]
+                    to_remove += [candidates[0]]
         for i in to_remove:
             bb.remove_inst(i)
 
