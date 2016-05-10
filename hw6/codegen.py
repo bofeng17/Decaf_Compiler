@@ -136,8 +136,8 @@ class IR_Method():
         return self.basic_blocks
 
     def print_layout(self):
-        print "Method:"+self.name
-        print "size:"+str(self.stack_layout[0])
+        # print "Method:"+self.name
+        # print "size:"+str(self.stack_layout[0])
         for reg in self.stack_layout[1]:
             print "reg to spill:"+self.reg_allocator.v2p(reg)
             for tup in self.stack_layout[1][reg]:
@@ -222,7 +222,6 @@ class BasicBlock():
     def get_terminate_inst(self):
         return self.insts[-1]
     def print_bb(self, reg_allocator,only_code=False):
-        return
         print self.label+": "
         if not only_code:
             print "#preds:",
@@ -340,7 +339,7 @@ def emit_code(name):
     absmc.g_obtain_cls_layouts()
     # import sys
     # sys.stdout = open(name+".ami", "w")
-    print ".static_data "+str(absmc.static_area[0])
+    # print ".static_data "+str(absmc.static_area[0])
     for cid in ast.classtable:
         c = ast.classtable[cid]
         if(not c.builtin):
@@ -539,7 +538,7 @@ def instrSelection(bb_list, AR, reg_allocator):
 
         else: # label
             assert isinstance(ir,str)
-            machine_code.append(ir)
+            machine_code.append(ir+':')
 
 
         # add sw instr if def_spilled

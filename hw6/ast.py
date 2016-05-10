@@ -349,8 +349,6 @@ class Method:
         self.reg_allocator = Reg_allocator(self.basic_blocks)#for printing code
         self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
         self.machinecode = instrSelection(self.ir_method.basic_blocks,self.ir_method.stack_layout,self.ir_method.reg_allocator)
-        for mc in self.machinecode:
-            print mc
         # self.reg_allocator = None
 
     def printCode(self):
@@ -358,10 +356,12 @@ class Method:
         # for i_or_l in self.code:
             # print i_or_l
         if self.name == 'main':
-            print Label("__main__","Method",indent=0)
+            print Label("main","Method",indent=0)
         print Label("M_{0}_{1}".format(self.name, self.id),"Method",indent=0)
-        for b in self.basic_blocks:
-            b.print_bb(self.reg_allocator)
+        # for b in self.basic_blocks:
+        #     b.print_bb(self.reg_allocator)
+        for mc in self.machinecode:
+            print mc
 
 class Constructor:
     """A class encoding constructors and their attributes in Decaf"""
@@ -407,8 +407,6 @@ class Constructor:
         self.reg_allocator = Reg_allocator(self.basic_blocks)
         self.ir_method = IR_Method(self.name, self.basic_blocks,self.reg_allocator)
         self.machinecode = instrSelection(self.ir_method.basic_blocks,self.ir_method.stack_layout,self.ir_method.reg_allocator)
-        for mc in self.machinecode:
-            print mc
         # self.reg_allocator = None
 
     def printCode(self):
@@ -416,8 +414,10 @@ class Constructor:
         # for i_or_l in self.code:
             # print i_or_l
         print Label("C_{0}".format(self.id),"Constructor", indent=0)
-        for b in self.basic_blocks:
-            b.print_bb(self.reg_allocator)
+        # for b in self.basic_blocks:
+        #     b.print_bb(self.reg_allocator)
+        for mc in self.machinecode:
+            print mc
 
     def printout(self):
         print "CONSTRUCTOR: {0}, {1}".format(self.id, self.visibility)
