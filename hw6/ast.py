@@ -1514,11 +1514,11 @@ class MethodInvocationExpr(Expr):
             rest_t.append(IR('restore',['t%d'%(t_reg_cnt-i)],cmt))
         self.t = generate_new_temp()
 
-        call_ret = [IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt)]
+        call = [IR('call',['M_%s_%d'%(self.mname,self.method.id)],cmt)]
         if self.method.rtype.typename != 'void':
-            call_ret.append(IR('move',[self.t,'a0'],cmt))
+            ret_val = [IR('move',[self.t,'a0'],cmt)]
 
-        self.code += save_a+save_t+move_a+ call_ret +rest_t+rest_a
+        self.code += save_a+save_t+move_a+ call +rest_t+rest_a+ ret_val
 
 
 class NewObjectExpr(Expr):

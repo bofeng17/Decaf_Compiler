@@ -399,54 +399,79 @@ def instrSelection(bb_list, AR, reg_allocator):
         ir_code += [bb.label]
         ir_code += bb.insts
 
+    a_reg_cnt = 0 # count a4,... reg used before call
+    reserved_reg = ['$v1','$s6','$s7']
+
     machine_code = []
     
-   # insert prologue, pre-process spill
-    (mc,def_spilled_IR,use_spilled_IR) = insert_prologue(AR)
+    # insert prologue, pre-process spill
+    # mem_s_ir = {ir: AR_offset}
+    # mem_l_ir = {ir: [[pos,AR_offset],]}
+    (mc,mem_s_ir,mem_l_ir) = insert_prologue(AR)
     machine_code += mc
 
     for ir in ir_code:
+        def_spilled = False
+        if ir in mem_s_ir:
+            # if def spilled
+            def_spilled = True
+            def_spilled_ARoffset = mem_s_ir[ir]
+            ir = IR(ir.opcode,['$v1',ir.operandList[1:]],ir.comment)
+
         if isinstance(ir, PHI_Node):
-            # TODO: v2p
-            machine_code += [MIPSCode('lw',['$v1','$fp',str(-AR[1][ir.get_uses()[0]][0])]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
+            offset = mem_l_ir[ir][0][1]
+            machine_code += [MIPSCode('lw',['$v1','$fp',str(-offset)]),MIPSCode('move',[ir.get_def()[0],'$v1'])]
 
         elif isinstance(ir, IR):
-            ir = IR(ir.opcode,[reg_allocator.v2p(o) for o in ir.operandList])
-            def_spilled = False
-            if ir in def_spilled_IR:
-                def_spilled = True
-                def_spilled_ARoffset = def_spilled_IR[ir]
-                ir = IR(ir.opcode,['$v1',ir.operand[1:]])
+            if ir in mem_l_ir:
+                # if one or more use spilled
+                spilled_uses = mem_l_ir[ir]
 
-            if ir in use_spilled_IR:
-                use_locs = use_spilled_IR[ir][0]
-                offset = use_spilled_IR[ir][1]
                 ir_def = ir.get_def()
                 ir_use = ir.get_uses()
-                for use_loc in use_locs: 
-                    if use_loc == 0:
-                        ir = IR(ir.opcode,ir_def+['$v1',ir_use[1:]])
-                    elif use_loc == 1:
+
+                use_spilled_cnt = 0
+                for pos,offset in spilled_uses: 
+                    r_reg = reserved_reg[use_spilled_cnt]
+                    if pos == 0:
+                        ir = IR(ir.opcode,ir_def+[r_reg,ir_use[1:]],ir.comment)
+                    elif pos == 1:
                         if len(ir_use) == 2:
-                            ir = IR(ir.opcode,ir_def+[ir_use[0],'$v1'])
+                            ir = IR(ir.opcode,ir_def+[ir_use[0],r_reg],ir.comment)
                         else:
                             assert len(ir_use == 3)
-                            ir = IR(ir.opcode,ir_def+[ir_use[0],'$v1',ir_use[2]])
+                            ir = IR(ir.opcode,ir_def+[ir_use[0],r_reg,ir_use[2]],ir.comment)
                     else:
-                        assert use_loc == 2
-                        ir = IR(ir.opcode,ir_def+[ir_use[-1],'$v1'])
+                        assert pos == 2
+                        ir = IR(ir.opcode,ir_def+[ir_use[-1],r_reg],ir.comment)
+                    
+                    machine_code += ['lw',[r_reg,'$fp',str(-offset)]]
 
-                machine_code += ['lw',['$v1','$fp',str(-offset)]]
-                
-
-
+                    use_spilled_cnt += 1
+ 
 
             opcode = ir.opcode
             operand = ir.operandList
 
-            cm = {'move_immed_i':'li','move':'move','iadd':'add','isub':'sub'} # cur_map
+            cm = {'move':'move'} # cur_map
             if opcode in cm:
-                machine_code += [MIPSCode(cm[opcode],operand,'asasa')]
+                ir_def = ir.get_def()[0]
+                if ir.comment in ['MethodInvocationExpr','NewObjectExpr'] and \
+                ir_def[0] == 'a' and int(ir_def[1:]) >= 4:
+                    # e.g. move a4, $t1 before call instr
+                    machine_code += [MIPSCode('addi',['$sp','$sp','-4']),MIPSCode('sw',[ir.operandList[1],'$sp','0'])]
+                    a_reg_cnt += 1
+                else: 
+                    # normal move
+                    # optimization
+                    o1 = reg_allocator.v2p(ir.operandList[0])
+                    o2 = reg_allocator.v2p(ir.operandList[1])
+                    if not (o1 != 'a' and o1 == o2):
+                        machine_code += [MIPSCode(cm[opcode],operand)]
+
+            cm = {'move_immed_i':'li','iadd':'add','isub':'sub'} 
+            if opcode in cm:
+                machine_code += [MIPSCode(cm[opcode],operand)]
 
             cm = {'imul':'mult'}
             if opcode in cm:
@@ -495,7 +520,9 @@ def instrSelection(bb_list, AR, reg_allocator):
 
             cm = {'call':'jal'}
             if opcode in cm:
-                machine_code += [MIPSCode(cm[opcode],[operand[0]])]
+                machine_code += [MIPSCode(cm[opcode],[operand[0]]),MIPSCode('addi',['$sp','$sp',str(4*a_reg_cnt)])]
+                a_reg_cnt = 0
+
             cm = {'ret':'jr'}
             if opcode in cm:
                 # insert epilogue
@@ -510,52 +537,60 @@ def instrSelection(bb_list, AR, reg_allocator):
             if opcode in cm:
                 machine_code += [MIPSCode(cm[opcode],[operand[0],'$sp','0']),MIPSCode('addi',['$sp','$sp','4'])]
 
-
-            if def_spilled:
-                machine_code += [MIPSCode('sw',['$v1','fp',def_spilled_ARoffset])]
-
-
         else: # label
             assert isinstance(ir,str)
             machine_code.append(ir)
+
+
+        # add sw instr if def_spilled
+        if def_spilled:
+            machine_code += [MIPSCode('sw',['$v1','fp',def_spilled_ARoffset])]
+
+    # v2p
+    for mc in machine_code:
+        if isinstance(mc,MIPSCode):
+            mc.MIPSv2p(reg_allocator) 
 
     return machine_code
 
 def insert_prologue(AR):
     #AR = [frame_size, mapping{stack_saved_reg: [offset, IR_or_PhiNode]}]
+    callee_saved_reg = []
+    mem_s_ir = {} # {ir: AR_offset}
+    mem_l_ir = {} # {ir: [[pos,AR_offset],]}
+
     # push $ra, push $fp, allocate stack frame
-    def_spilled_IR = {} # {ir: AR_offset}
-    use_spilled_IR = {} # {ir: [[pos],AR_offset]}
     machine_code = [MIPSCode('sw',['$ra','$sp','-4']),MIPSCode('sw',['$fp','$sp','-8']),\
                     MIPSCode('addi',['$sp','$sp','-8']),MIPSCode('move',['$fp','$sp']),\
-                    MIPSCode('addi',['$sp','$sp','-'+str(AR[0])])]
+                    MIPSCode('addi',['$sp','$sp',str(-AR[0])])]
+
     # push callee-saved & spilled registers
-    mapping = AR[1] # dict
-    for reg in mapping:
-        offset = mapping[reg][0]
-        if len(mapping[reg]) == 1:
+    stack_layout = AR[1] # list of tuples
+    for ir_ref,vreg,offset,action,phi_ref,pos in stack_layout:
+        if ir_ref is None:
             # callee-saved registers
-            machine_code += [MIPS('sw',[reg,'$fp',offset])]
-        else: # len is 2
-            # spilled registers, reg is actually vreg
-            assert len(mapping[reg]) == 2
-
-            def_spilled = mapping[reg][1]
-            def_spilled_IR[def_spilled] = offset
-            for use_spilled in def_spilled.get_def_refs():
-                pos = use_spilled.get_uses().index(reg)
-                if use_spilled not in use_spilled_IR:
-                    use_spilled_IR[use_spilled] = [[pos],offset]
+            machine_code += [MIPS('sw',[vreg,'$fp',offset])]
+        else:
+            # spilled registers or phi nodes
+            if action == 'store':
+                mem_s_ir[ir_ref] = offset
+            else:
+                assert action == 'load'
+                if ir_ref not in mem_l_ir:
+                    mem_l_ir[ir_ref] = [[pos,offset]]
                 else:
-                    use_spilled_IR[use_spilled][1].append(pos)
+                    mem_l_ir[ir_ref].append([pos,offset])
 
-
-    return machine_code, def_spilled_IR, use_spilled_IR
+    return machine_code,mem_s_ir,mem_l_ir
 
 def insert_epilogue(AR):
     machine_code = []
     # pop callee-saved registers
-
+    stack_layout = AR[1] # list of tuples
+    for ir_ref,vreg,offset,action,phi_ref,pos in stack_layout:
+        if ir_ref is None:
+            # callee-saved registers
+            machine_code += [MIPS('lw',[vreg,'$fp',offset])]
     # destroy stack frame, pop $fp, pop $ra
     machine_code += [MIPSCode('addi',['$sp','$sp',str(AR[0]+8)]),\
                      MIPSCode('lw',['$ra','$sp','-4']),MIPSCode('lw',['$fp','$sp','-8'])]
@@ -564,18 +599,17 @@ def insert_epilogue(AR):
 class MIPSCode:
     def __init__(self, opcode, operandList, comment=''):
         self.opcode = opcode
-        self.operandList = []
         # debug
         if not isinstance(operandList,list):
             print "operandList %s is not a list!" % operandList
-        for operand in operandList:
-            if str(operand)[0] in ['v','a','t','s']:
-                operand = '$'+operand
-            self.operandList.append(operand)
+        self.operandList = operandList
+        
+        self.comment = comment
         if comment is not '':
             self.comment = '# '+comment
-        else: 
-            self.comment = comment
+
+    def __repr__(self):
+        return self.__str__()
 
     def __str__(self):
         if self.opcode in ['lw','sw']: # self.operandList==[val,base,off]
@@ -586,5 +620,15 @@ class MIPSCode:
             self.operandList = [str(x) for x in self.operandList]
             return "        {0} {1} {2}".format(self.opcode, ', '.join(self.operandList),self.comment)
             # return "        {0} {1}{2:>40}".format(self.opcode, ', '.join(self.operandList), '#'+self.comment)
+
+    def MIPSv2p(self,reg_allocator):
+        operandList = self.operandList
+        self.operandList = []
+        for o in operandList:
+            o = reg_allocator.v2p(o)
+            # if str(o)[0] in ['v','a','t','s']:
+            if str(o)[0] in ['v','a','t']:
+                o = '$'+o
+            self.operandList.append(o)
 
 
